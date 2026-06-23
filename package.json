@@ -1,0 +1,31 @@
+{
+  "name": "FC237",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:native": "turbo -F native dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F @FC237/backend dev",
+    "dev:setup": "turbo -F @FC237/backend dev:setup",
+    "check": "biome check --write ."
+  },
+  "dependencies": {
+    "@FC237/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@FC237/config": "workspace:*",
+    "@biomejs/biome": "^2.4.16",
+    "turbo": "^2.9.16",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@11.5.0"
+}

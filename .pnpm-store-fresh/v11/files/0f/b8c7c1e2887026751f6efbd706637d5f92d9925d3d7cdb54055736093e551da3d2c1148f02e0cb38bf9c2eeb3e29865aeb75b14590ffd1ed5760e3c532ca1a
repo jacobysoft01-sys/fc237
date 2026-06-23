@@ -1,0 +1,14 @@
+import { ConfigureSSOContent } from "../ConfigureSSO/ConfigureSSO.js";
+import { useOrganization } from "@clerk/shared/react";
+import { jsx } from "@emotion/react/jsx-runtime";
+
+//#region src/components/OrganizationProfile/OrganizationSelfServeSSOPage.tsx
+const OrganizationSelfServeSSOPage = ({ contentRef }) => {
+	const { organization } = useOrganization();
+	if (!organization) return null;
+	return /* @__PURE__ */ jsx(ConfigureSSOContent, { contentRef });
+};
+
+//#endregion
+export { OrganizationSelfServeSSOPage };
+//# sourceMappingURL=OrganizationSelfServeSSOPage.js.map

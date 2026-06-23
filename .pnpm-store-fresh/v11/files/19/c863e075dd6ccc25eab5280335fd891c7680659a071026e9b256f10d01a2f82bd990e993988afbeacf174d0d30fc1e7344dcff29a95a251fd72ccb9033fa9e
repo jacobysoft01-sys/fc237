@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/apple/index.ts"],"sourcesContent":["export { useSignInWithApple } from '../hooks/useSignInWithApple';\nexport type {\n  StartAppleAuthenticationFlowParams,\n  StartAppleAuthenticationFlowReturnType,\n} from '../hooks/useSignInWithApple';\n"],"mappings":";;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,gCAAmC;","names":[]}

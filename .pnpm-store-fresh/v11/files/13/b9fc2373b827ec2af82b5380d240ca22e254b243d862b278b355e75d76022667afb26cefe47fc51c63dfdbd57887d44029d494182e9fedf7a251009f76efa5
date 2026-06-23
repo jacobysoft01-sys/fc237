@@ -1,0 +1,1 @@
+{"version":3,"file":"useNativeClientEvents.d.ts","sourceRoot":"","sources":["../../src/hooks/useNativeClientEvents.ts"],"names":[],"mappings":"AAKA;;GAEG;AACH,UAAU,iBAAiB;IACzB,QAAQ,EAAE,MAAM,CAAC;CAClB;AAED,UAAU,2BAA2B;IACnC,iBAAiB,EAAE,iBAAiB,GAAG,IAAI,CAAC;CAC7C;AAUD;;GAEG;AACH,wBAAgB,qBAAqB,IAAI,2BAA2B,CAiCnE"}

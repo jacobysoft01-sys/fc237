@@ -1,0 +1,3 @@
+{
+  "extends": "@FC237/config/tsconfig.base.json"
+}

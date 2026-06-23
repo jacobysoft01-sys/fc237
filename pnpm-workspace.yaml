@@ -1,0 +1,22 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  msw: true
+  msgpackr-extract: true
+  bufferutil: true
+  esbuild: true
+  sharp: true
+  utf-8-validate: true
+  browser-tabs-lock: true
+  core-js: true
+catalog:
+  dotenv: ^17.2.2
+  zod: ^4.1.13
+  typescript: ^6
+  lucide-react: ^0.546.0
+  next-themes: ^0.4.6
+  sonner: ^2.0.5
+  convex: ^1.33.1
+  "@types/react-dom": ^19.2.3
+  tailwindcss: ^4.1.18

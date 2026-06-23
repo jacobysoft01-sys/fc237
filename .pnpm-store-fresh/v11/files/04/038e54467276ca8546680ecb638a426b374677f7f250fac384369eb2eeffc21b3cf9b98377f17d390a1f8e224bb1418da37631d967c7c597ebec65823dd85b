@@ -1,0 +1,71 @@
+import { CardStateProvider } from "../../elements/contexts/index.js";
+import { useConfigureSSO } from "./ConfigureSSOContext.js";
+import { Wizard } from "./elements/Wizard/Wizard.js";
+import { ConfigureSSOHeader } from "./ConfigureSSOHeader.js";
+import { ConfigureStep } from "./steps/ConfigureStep/index.js";
+import { ConfirmationStep } from "./steps/ConfirmationStep.js";
+import { SelectProviderStep } from "./steps/SelectProviderStep.js";
+import { TestConfigurationStep } from "./steps/TestConfigurationStep.js";
+import { VerifyDomainStep } from "./steps/VerifyDomainStep.js";
+import React from "react";
+import { jsx, jsxs } from "@emotion/react/jsx-runtime";
+
+//#region src/components/ConfigureSSO/ConfigureSSOSteps.tsx
+/** The ConfigureSSO step graph the entry-guard `<Wizard>` derives its machine from. */
+const ConfigureSSOSteps = () => {
+	const { organizationEnterpriseConnection: c } = useConfigureSSO();
+	return /* @__PURE__ */ jsxs(Wizard, {
+		steps: React.useMemo(() => [
+			{
+				id: "verify-domain",
+				label: "Verify domain"
+			},
+			{
+				id: "select-provider",
+				guard: () => c.isPrimaryEmailVerified
+			},
+			{
+				id: "configure",
+				label: "Configure",
+				guard: () => c.isPrimaryEmailVerified && c.hasConnection
+			},
+			{
+				id: "test",
+				label: "Test",
+				guard: () => c.hasMinimumConfiguration || c.isActive
+			},
+			{
+				id: "confirmation",
+				label: "Confirmation",
+				guard: () => c.hasSuccessfulTestRun || c.isActive
+			}
+		], [c]),
+		children: [
+			/* @__PURE__ */ jsx(ConfigureSSOHeader, {}),
+			/* @__PURE__ */ jsx(Wizard.Match, {
+				id: "verify-domain",
+				children: /* @__PURE__ */ jsx(CardStateProvider, { children: /* @__PURE__ */ jsx(VerifyDomainStep, {}) })
+			}),
+			/* @__PURE__ */ jsx(Wizard.Match, {
+				id: "select-provider",
+				children: /* @__PURE__ */ jsx(CardStateProvider, { children: /* @__PURE__ */ jsx(SelectProviderStep, {}) })
+			}),
+			/* @__PURE__ */ jsx(Wizard.Match, {
+				id: "configure",
+				children: /* @__PURE__ */ jsx(CardStateProvider, { children: /* @__PURE__ */ jsx(ConfigureStep, {}) })
+			}),
+			/* @__PURE__ */ jsx(Wizard.Match, {
+				id: "test",
+				children: /* @__PURE__ */ jsx(CardStateProvider, { children: /* @__PURE__ */ jsx(TestConfigurationStep, {}) })
+			}),
+			/* @__PURE__ */ jsx(Wizard.Match, {
+				id: "confirmation",
+				children: /* @__PURE__ */ jsx(CardStateProvider, { children: /* @__PURE__ */ jsx(ConfirmationStep, {}) })
+			})
+		]
+	});
+};
+
+//#endregion
+export { ConfigureSSOSteps };
+//# sourceMappingURL=ConfigureSSOSteps.js.map

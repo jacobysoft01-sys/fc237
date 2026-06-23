@@ -1,0 +1,222 @@
+import { localizationKeys } from "../../../localization/localizationKeys.js";
+import { useLocalizations } from "../../../localization/makeLocalizable.js";
+import { common } from "../../../styledSystem/common.js";
+import { mqu } from "../../../styledSystem/breakpoints.js";
+import { descriptors } from "../../../customizables/elementDescriptors.js";
+import { useCardState } from "../../../elements/contexts/index.js";
+import { Flow } from "../../../customizables/Flow.js";
+import { Box, Col, Grid, RadioInput, Span, Text } from "../../../customizables/index.js";
+import { Alert } from "../../../elements/Alert.js";
+import { handleError } from "../../../utils/errorHandler.js";
+import { useConfigureSSO } from "../ConfigureSSOContext.js";
+import { Step } from "../elements/Step.js";
+import { useWizard } from "../elements/Wizard/WizardContext.js";
+import React from "react";
+import { jsx, jsxs } from "@emotion/react/jsx-runtime";
+import { iconImageUrl } from "@clerk/shared/constants";
+
+//#region src/components/ConfigureSSO/steps/SelectProviderStep.tsx
+/**
+* Provider icons whose SVGs are monochromatic and should flip with the
+* theme. Mirrors the SUPPORTS_MASK_IMAGE list in `common/ProviderIcon.tsx`
+* — keep in sync if either grows.
+*/
+const MONOCHROMATIC_PROVIDER_ICONS = new Set(["okta"]);
+const PROVIDER_GROUPS = [{
+	id: "saml",
+	label: localizationKeys("configureSSO.selectProviderStep.saml.groupLabel"),
+	options: [
+		{
+			id: "saml_okta",
+			label: localizationKeys("configureSSO.selectProviderStep.saml.okta"),
+			iconId: "okta"
+		},
+		{
+			id: "saml_microsoft",
+			label: localizationKeys("configureSSO.selectProviderStep.saml.microsoft"),
+			iconId: "microsoft"
+		},
+		{
+			id: "saml_google",
+			label: localizationKeys("configureSSO.selectProviderStep.saml.google"),
+			iconId: "google"
+		},
+		{
+			id: "saml_custom",
+			label: localizationKeys("configureSSO.selectProviderStep.saml.customSaml"),
+			iconId: "saml"
+		}
+	]
+}];
+const SelectProviderStep = () => {
+	const { primaryEmailAddress, organizationEnterpriseConnection: c, mutations: { createConnection } } = useConfigureSSO();
+	const { goNext } = useWizard();
+	const [selected, setSelected] = React.useState(c.provider ?? null);
+	const card = useCardState();
+	const [isSubmitting, setIsSubmitting] = React.useState(false);
+	const handleSelect = (next) => {
+		setSelected(next);
+	};
+	const handleContinue = async () => {
+		if (!selected) return;
+		if (c.hasConnection) {
+			goNext();
+			return;
+		}
+		card.setError(void 0);
+		setIsSubmitting(true);
+		try {
+			await createConnection(selected, primaryEmailAddress);
+			goNext();
+		} catch (err) {
+			handleError(err, [], card.setError);
+			setIsSubmitting(false);
+		}
+	};
+	return /* @__PURE__ */ jsx(Flow.Part, {
+		part: "selectProvider",
+		children: /* @__PURE__ */ jsxs(Step, {
+			elementDescriptor: descriptors.configureSSOStep,
+			elementId: descriptors.configureSSOStep.setId("select-provider"),
+			children: [
+				/* @__PURE__ */ jsx(Step.Header, {
+					title: localizationKeys("configureSSO.selectProviderStep.title"),
+					description: localizationKeys("configureSSO.selectProviderStep.subtitle")
+				}),
+				/* @__PURE__ */ jsx(Step.Body, { children: /* @__PURE__ */ jsxs(Step.Section, {
+					sx: (theme) => ({ gap: theme.space.$5 }),
+					children: [
+						PROVIDER_GROUPS.map((group) => /* @__PURE__ */ jsxs(Col, {
+							elementDescriptor: descriptors.configureSSOProviderGroup,
+							elementId: descriptors.configureSSOProviderGroup.setId(group.id),
+							gap: 3,
+							children: [/* @__PURE__ */ jsx(Text, {
+								elementDescriptor: descriptors.configureSSOProviderGroupLabel,
+								elementId: descriptors.configureSSOProviderGroupLabel.setId(group.id),
+								as: "label",
+								variant: "subtitle",
+								localizationKey: group.label
+							}), /* @__PURE__ */ jsx(Grid, {
+								elementDescriptor: descriptors.configureSSOProviderGrid,
+								gap: 3,
+								sx: {
+									gridTemplateColumns: "repeat(2, 1fr)",
+									[mqu.sm]: { gridTemplateColumns: "1fr" }
+								},
+								children: group.options.map((option) => /* @__PURE__ */ jsx(ProviderCard, {
+									name: "configure-sso-provider",
+									value: option.id,
+									iconId: option.iconId,
+									label: option.label,
+									checked: selected === option.id,
+									onChange: () => handleSelect(option.id)
+								}, option.id))
+							})]
+						}, group.id)),
+						/* @__PURE__ */ jsx(Alert, {
+							variant: "warning",
+							title: localizationKeys("configureSSO.selectProviderStep.warning")
+						}),
+						card.error && /* @__PURE__ */ jsx(Alert, {
+							variant: "danger",
+							title: card.error,
+							sx: (t) => ({ margin: t.space.$3 })
+						})
+					]
+				}) }),
+				/* @__PURE__ */ jsxs(Step.Footer, { children: [/* @__PURE__ */ jsx(Step.Footer.Previous, { isDisabled: true }), /* @__PURE__ */ jsx(Step.Footer.Continue, {
+					onClick: handleContinue,
+					isLoading: isSubmitting,
+					isDisabled: !selected || isSubmitting
+				})] })
+			]
+		})
+	});
+};
+const ProviderCard = ({ name, value, iconId, label, checked, onChange }) => {
+	const { t } = useLocalizations();
+	const labelText = t(label);
+	return /* @__PURE__ */ jsxs(Box, {
+		as: "label",
+		elementDescriptor: descriptors.configureSSOProviderCard,
+		elementId: descriptors.configureSSOProviderCard.setId(value),
+		isActive: checked,
+		sx: (t) => ({
+			display: "flex",
+			flexDirection: "column",
+			alignItems: "center",
+			justifyContent: "center",
+			gap: t.space.$2,
+			height: t.sizes.$32,
+			padding: t.space.$1x5,
+			cursor: "pointer",
+			position: "relative",
+			...common.borderVariants(t).normal,
+			"&:has(input:focus-visible)": {
+				...common.focusRingStyles(t),
+				borderColor: t.colors.$borderAlpha300
+			},
+			"&:hover": { backgroundColor: t.colors.$neutralAlpha50 },
+			"&:has(input:checked)": { backgroundColor: t.colors.$neutralAlpha50 }
+		}),
+		children: [
+			/* @__PURE__ */ jsx(RadioInput, {
+				elementDescriptor: descriptors.configureSSOProviderCardRadio,
+				elementId: descriptors.configureSSOProviderCardRadio.setId(value),
+				name,
+				value,
+				checked,
+				onChange,
+				focusRing: false,
+				sx: (theme) => ({
+					position: "absolute",
+					top: theme.space.$1x5,
+					insetInlineStart: theme.space.$1x5,
+					margin: 0,
+					width: "fit-content",
+					boxShadow: "none",
+					"&:hover": { boxShadow: "none" }
+				})
+			}),
+			/* @__PURE__ */ jsx(Span, {
+				elementDescriptor: descriptors.configureSSOProviderCardIcon,
+				elementId: descriptors.configureSSOProviderCardIcon.setId(value),
+				"aria-hidden": true,
+				sx: (theme) => {
+					const isMonochromatic = MONOCHROMATIC_PROVIDER_ICONS.has(iconId);
+					const baseSize = {
+						width: theme.sizes.$8,
+						height: theme.sizes.$8
+					};
+					if (isMonochromatic) return {
+						...baseSize,
+						backgroundColor: theme.colors.$colorForeground,
+						maskImage: `url(${iconImageUrl(iconId)})`,
+						maskSize: "contain",
+						maskPosition: "center",
+						maskRepeat: "no-repeat"
+					};
+					return {
+						...baseSize,
+						backgroundImage: `url(${iconImageUrl(iconId)})`,
+						backgroundSize: "contain",
+						backgroundPosition: "center",
+						backgroundRepeat: "no-repeat"
+					};
+				}
+			}),
+			/* @__PURE__ */ jsx(Text, {
+				elementDescriptor: descriptors.configureSSOProviderCardLabel,
+				elementId: descriptors.configureSSOProviderCardLabel.setId(value),
+				as: "span",
+				variant: "body",
+				sx: (theme) => ({ color: theme.colors.$colorForeground }),
+				children: labelText
+			})
+		]
+	});
+};
+
+//#endregion
+export { SelectProviderStep };
+//# sourceMappingURL=SelectProviderStep.js.map
