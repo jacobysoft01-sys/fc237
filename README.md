@@ -61,7 +61,13 @@ Deploy the `apps/web` application on Vercel.
 - Documentation is served by the same web deployment at `/docs`
 - The root `pnpm build` command is now aligned to the web app for hosted builds
 
-If your Vercel project is connected to the repository root, set the project's Root Directory to `apps/web` in Vercel so the deployment uses the web app directly.
+Preferred setup: set the Vercel project's Root Directory to `apps/web`.
+
+Compatibility notes:
+
+- `apps/web/vercel.json` supports the preferred `apps/web` root directly
+- `apps/fumadocs/vercel.json` provides a compatibility bridge for older Vercel projects still rooted at `apps/fumadocs` by building `apps/web` and resolving its `.next` output correctly
+- The repository-root `vercel.json` still supports root-level deployments that build only the `web` workspace
 
 ## UI Customization
 
