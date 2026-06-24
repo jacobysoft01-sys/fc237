@@ -8,7 +8,8 @@
   "type": "module",
   "scripts": {
     "dev": "turbo dev",
-    "build": "turbo build",
+    "build": "turbo -F web build",
+    "build:all": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",

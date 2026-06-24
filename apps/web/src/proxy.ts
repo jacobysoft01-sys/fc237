@@ -1,4 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { isMarkdownPreferred, rewritePath } from "fumadocs-core/negotiation";
+import { NextResponse } from "next/server";
+
+import { docsContentRoute, docsRoute } from "@/lib/docs/shared";
 
 const isProtectedRoute = createRouteMatcher([
   "/admin(.*)",
@@ -21,7 +25,28 @@ const isProtectedRoute = createRouteMatcher([
   "/vendors(.*)",
 ]);
 
+const { rewrite: rewriteDocs } = rewritePath(
+  `${docsRoute}{/*path}`,
+  `${docsContentRoute}{/*path}/content.md`,
+);
+const { rewrite: rewriteSuffix } = rewritePath(
+  `${docsRoute}{/*path}.md`,
+  `${docsContentRoute}{/*path}/content.md`,
+);
+
 export default clerkMiddleware(async (auth, req) => {
+  const markdownSuffixMatch = rewriteSuffix(req.nextUrl.pathname);
+  if (markdownSuffixMatch) {
+    return NextResponse.rewrite(new URL(markdownSuffixMatch, req.nextUrl));
+  }
+
+  if (isMarkdownPreferred(req)) {
+    const markdownNegotiationMatch = rewriteDocs(req.nextUrl.pathname);
+    if (markdownNegotiationMatch) {
+      return NextResponse.rewrite(new URL(markdownNegotiationMatch, req.nextUrl));
+    }
+  }
+
   if (isProtectedRoute(req)) {
     await auth.protect();
   }

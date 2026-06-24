@@ -21,6 +21,9 @@ export default function Home() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <Link className={buttonVariants({ variant: "ghost" })} href="/docs">
+              Docs
+            </Link>
             <Show when="signed-out">
               <SignInButton mode="modal">
                 <Button variant="ghost">Sign in</Button>

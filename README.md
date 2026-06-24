@@ -53,6 +53,16 @@ Open [http://localhost:3001](http://localhost:3001) in your browser to see the w
 Use the Expo Go app to run the mobile application.
 Your app will connect to the Convex cloud backend automatically.
 
+## Vercel Deployment
+
+Deploy the `apps/web` application on Vercel.
+
+- The primary product app lives at `/`
+- Documentation is served by the same web deployment at `/docs`
+- The root `pnpm build` command is now aligned to the web app for hosted builds
+
+If your Vercel project is connected to the repository root, set the project's Root Directory to `apps/web` in Vercel so the deployment uses the web app directly.
+
 ## UI Customization
 
 React web apps in this stack share shadcn/ui primitives through `packages/ui`.
@@ -100,7 +110,8 @@ FC237/
 ## Available Scripts
 
 - `pnpm run dev`: Start all applications in development mode
-- `pnpm run build`: Build all applications
+- `pnpm run build`: Build the deployable web application
+- `pnpm run build:all`: Build all workspace applications
 - `pnpm run dev:web`: Start only the web application
 - `pnpm run dev:setup`: Setup and configure your Convex project
 - `pnpm run check-types`: Check TypeScript types across all apps

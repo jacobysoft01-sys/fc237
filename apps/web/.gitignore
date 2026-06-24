@@ -16,6 +16,7 @@
 /out/
 /build/
 /dist/
+.source
 .vinxi
 .output
 .react-router/

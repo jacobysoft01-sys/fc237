@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3001",
-    "build": "next build",
-    "start": "next start"
+    "docs:generate": "fumadocs-mdx",
+    "dev": "pnpm run docs:generate && next dev --port 3001",
+    "build": "pnpm run docs:generate && next build",
+    "start": "next start",
+    "postinstall": "pnpm run docs:generate"
   },
   "dependencies": {
     "@FC237/backend": "workspace:*",
@@ -16,6 +18,9 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "convex": "catalog:",
     "dotenv": "catalog:",
+    "fumadocs-core": "16.10.0",
+    "fumadocs-mdx": "15.0.12",
+    "fumadocs-ui": "16.10.0",
     "jspdf": "^4.2.1",
     "lucide-react": "catalog:",
     "next": "^16.2.0",
@@ -28,6 +33,7 @@
   "devDependencies": {
     "@FC237/config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
+    "@types/mdx": "^2.0.13",
     "@types/node": "^20",
     "@types/react": "^19.2.15",
     "@types/react-dom": "catalog:",
