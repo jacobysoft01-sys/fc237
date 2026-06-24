@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/platform/page-header";
 import { ProgressLine, StatusBadge } from "@/components/platform/ui";
 
 export const fieldClass =
-  "min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50";
+  "min-h-10 w-full rounded-2xl border border-input/85 bg-background/92 px-3.5 py-2 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20";
 
 export function Field({
   label,

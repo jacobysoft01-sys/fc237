@@ -9,11 +9,11 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,oklch(0.95_0.04_286),transparent_34rem),linear-gradient(180deg,oklch(1_0_0),oklch(0.985_0.006_286))]">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.97_0.03_186),transparent_30rem),radial-gradient(circle_at_top_right,oklch(0.955_0.026_78),transparent_28rem),linear-gradient(180deg,oklch(0.995_0.008_95),oklch(0.983_0.012_210))]">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8">
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <div className="flex size-11 items-center justify-center rounded-[1.35rem] bg-primary text-primary-foreground shadow-md shadow-primary/20">
               <Shield />
             </div>
             <div>
@@ -43,7 +43,7 @@ export default function Home() {
         </header>
         <section className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[1fr_520px]">
           <div className="max-w-3xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/12 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary shadow-sm">
               <BrainCircuit />
               Hybrid AI and cloud governance for SMEs
             </div>
@@ -75,7 +75,7 @@ export default function Home() {
               </Show>
             </div>
           </div>
-          <Card className="rounded-lg border-0 bg-background/86 shadow-xl ring-1 ring-border">
+          <Card className="rounded-[2rem] border-0 bg-background/88 shadow-xl ring-1 ring-border/70">
             <CardContent className="grid gap-4 p-6">
               {[
                 ["Executive command center", "Compliance score, evidence coverage, open findings, and high-risk AI systems."],
@@ -91,7 +91,7 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-              <div className="mt-2 rounded-lg bg-primary p-5 text-primary-foreground">
+              <div className="mt-2 rounded-[1.5rem] bg-primary p-5 text-primary-foreground shadow-lg shadow-primary/20">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Bot />
                   FC237 Assistant

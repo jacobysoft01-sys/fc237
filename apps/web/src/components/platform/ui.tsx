@@ -10,14 +10,14 @@ export function StatusBadge({
   tone?: "neutral" | "purple" | "green" | "yellow" | "red" | "orange";
 }) {
   const tones = {
-    neutral: "bg-muted text-muted-foreground",
-    purple: "bg-primary/10 text-primary",
-    green: "bg-emerald-50 text-emerald-700",
-    yellow: "bg-amber-50 text-amber-700",
-    orange: "bg-orange-50 text-orange-700",
-    red: "bg-red-50 text-red-700",
+    neutral: "border border-slate-200/70 bg-white/75 text-slate-600 shadow-sm",
+    purple: "border border-primary/15 bg-primary/12 text-primary shadow-sm",
+    green: "border border-emerald-200/70 bg-emerald-50/90 text-emerald-700 shadow-sm",
+    yellow: "border border-amber-200/70 bg-amber-50/90 text-amber-700 shadow-sm",
+    orange: "border border-orange-200/70 bg-orange-50/90 text-orange-700 shadow-sm",
+    red: "border border-rose-200/70 bg-rose-50/90 text-rose-700 shadow-sm",
   };
-  return <span className={cn("inline-flex items-center rounded-md px-2 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
+  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
 }
 
 export function ProgressLine({ value, tone = "purple" }: { value: number; tone?: "purple" | "green" | "red" | "orange" }) {
@@ -28,7 +28,7 @@ export function ProgressLine({ value, tone = "purple" }: { value: number; tone?:
     orange: "bg-orange-500",
   };
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/80">
       <div className={cn("h-full rounded-full", tones[tone])} style={{ width: `${Math.max(0, Math.min(value, 100))}%` }} />
     </div>
   );
@@ -57,14 +57,14 @@ export function MetricCard({
   };
 
   return (
-    <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border/80">
+    <Card className="rounded-[1.75rem] border-0 shadow-sm ring-1 ring-border/70">
       <CardHeader className="grid grid-cols-[1fr_auto] gap-3">
         <div>
           <CardTitle className="text-xs font-semibold text-muted-foreground">{title}</CardTitle>
           <div className="mt-3 text-2xl font-semibold tracking-normal text-foreground">{value}</div>
           <p className="mt-2 text-xs text-muted-foreground">{description}</p>
         </div>
-        <div className={cn("flex size-12 items-center justify-center rounded-full", toneClasses[tone])}>
+        <div className={cn("flex size-12 items-center justify-center rounded-[1.35rem] shadow-sm", toneClasses[tone])}>
           <Icon />
         </div>
       </CardHeader>

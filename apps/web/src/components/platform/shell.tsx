@@ -105,12 +105,12 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
   }, [isLoaded, isSignedIn, upsertUser]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.98_0.025_190),transparent_34rem),radial-gradient(circle_at_top_right,oklch(0.97_0.03_95),transparent_32rem),linear-gradient(180deg,oklch(1_0_0),oklch(0.987_0.005_160))] text-foreground">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.97_0.03_186),transparent_34rem),radial-gradient(circle_at_top_right,oklch(0.955_0.025_78),transparent_30rem),linear-gradient(180deg,oklch(0.995_0.008_95),oklch(0.982_0.01_210))] text-foreground">
       <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
         <aside className="hidden border-r bg-background/92 backdrop-blur lg:block">
           <div className="flex h-full flex-col">
             <Link href="/dashboard" className="flex items-center gap-3 px-6 py-6">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+              <div className="flex size-12 items-center justify-center rounded-[1.5rem] bg-primary text-primary-foreground shadow-md shadow-primary/20">
                 <Shield />
               </div>
               <div>
@@ -138,7 +138,7 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
               ))}
             </nav>
 
-            <div className="m-4 rounded-2xl border border-border/70 bg-card p-4">
+            <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/95 p-4 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
                   {(current?.organization?.name ?? "FC").slice(0, 2).toUpperCase()}
