@@ -4,6 +4,7 @@ import { Show, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button, buttonVariants } from "@FC237/ui/components/button";
 import { Card, CardContent } from "@FC237/ui/components/card";
 import { ArrowRight, Bot, BrainCircuit, CheckCircle2, Shield } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 
 export default function Home() {
@@ -21,7 +22,7 @@ export default function Home() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <Link className={buttonVariants({ variant: "ghost" })} href="/docs">
+            <Link className={buttonVariants({ variant: "ghost" })} href={"/docs" as Route}>
               Docs
             </Link>
             <Show when="signed-out">
@@ -33,7 +34,7 @@ export default function Home() {
               </SignUpButton>
             </Show>
             <Show when="signed-in">
-              <Link className={buttonVariants()} href={"/dashboard" as any}>
+              <Link className={buttonVariants()} href={"/dashboard" as Route}>
                 Open dashboard
                 <ArrowRight data-icon="inline-end" />
               </Link>
@@ -67,7 +68,7 @@ export default function Home() {
                 </SignInButton>
               </Show>
               <Show when="signed-in">
-                <Link className={buttonVariants({ size: "lg" })} href={"/dashboard" as any}>
+                <Link className={buttonVariants({ size: "lg" })} href={"/dashboard" as Route}>
                   Go to dashboard
                   <ArrowRight data-icon="inline-end" />
                 </Link>

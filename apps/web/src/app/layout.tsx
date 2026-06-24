@@ -6,9 +6,17 @@ import "../index.css";
 
 import Providers from "@/components/providers";
 
+const metadataBaseUrl =
+  process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000";
+
 export const metadata: Metadata = {
   title: "FC237",
   description: "FC237",
+  metadataBase: new URL(metadataBaseUrl),
 };
 
 export default function RootLayout({

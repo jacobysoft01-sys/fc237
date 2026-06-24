@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { docsContentRoute, docsRoute } from "@/lib/docs/shared";
 
 const isProtectedRoute = createRouteMatcher([
+  "/action-plan(.*)",
   "/admin(.*)",
   "/ai-risks(.*)",
   "/ai-systems(.*)",

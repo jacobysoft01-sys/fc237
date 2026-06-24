@@ -1,29 +1,13 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
+import { buildComplianceReport, buildOverview, loadWorkspaceSnapshot } from "./_engine";
 import { getActiveOrganization, logAuditEvent, now } from "./_shared";
 
-function detectIntent(content: string) {
-  const text = content.toLowerCase();
-  if (
-    text.includes("google drive") &&
-    (text.includes("invoice") || text.includes("customer document") || text.includes("customer documents"))
-  ) {
-    return "google drive confidential documents";
-  }
-  if (text.includes("mfa") || text.includes("multi-factor")) return "mfa guidance";
-  if (text.includes("backup")) return "backup guidance";
-  if (text.includes("vendor") || text.includes("provider")) return "vendor evaluation";
-  if (text.includes("incident") || text.includes("breach") || text.includes("suspicious")) return "incident response";
-  if (text.includes("evidence") || text.includes("record")) return "compliance evidence";
-  if (text.includes("maturity")) return "maturity assessment";
-  if (text.includes("ai") || text.includes("model")) return "ai system inventory";
-  if (text.includes("risk")) return "risk scoring";
-  return "cloud readiness";
-}
+type AssistantMode = "Ask" | "Assessment" | "Recommendation" | "Evidence" | "Incident" | "Report" | "Policy";
 
 type AssistantResponse = {
-  intent: string;
+  mode: AssistantMode;
   explanation: string;
   identifiedRisk: string;
   recommendedActions: string[];
@@ -31,112 +15,159 @@ type AssistantResponse = {
   evidenceToKeep: string[];
   nextStep: string;
   escalationNotice: string;
-  screenshotUseCase?: boolean;
+  referencedScore?: string;
 };
 
-function buildResponse(intent: string) {
-  const common = {
-    priority: "high priority",
-    escalationNotice:
-      "Escalate to a cybersecurity expert, legal professional, or provider if personal data, payment fraud, ransomware, or confirmed account compromise is involved.",
-  };
+function detectMode(content: string): AssistantMode {
+  const text = content.toLowerCase();
+  if (text.includes("assessment") || text.includes("readiness") || text.includes("maturity")) return "Assessment";
+  if (text.includes("evidence") || text.includes("artifact") || text.includes("upload")) return "Evidence";
+  if (text.includes("incident") || text.includes("breach") || text.includes("phishing") || text.includes("hacked")) return "Incident";
+  if (text.includes("report") || text.includes("pdf") || text.includes("summary")) return "Report";
+  if (text.includes("policy") || text.includes("draft")) return "Policy";
+  if (text.includes("recommend") || text.includes("vendor") || text.includes("risk") || text.includes("action")) {
+    return "Recommendation";
+  }
+  return "Ask";
+}
 
-  const responses: Record<string, Omit<AssistantResponse, "intent">> = {
-    "google drive confidential documents": {
-      priority: "high priority",
-      explanation:
-        "Based on FC237, this involves confidential and possibly personal data. You should enable multi-factor authentication, review folder-sharing permissions, remove former employees, avoid public links for sensitive documents, classify invoices and customer documents as confidential, keep a separate backup, and record the access review as compliance evidence.",
-      identifiedRisk: "Confidential and possibly personal data stored in Google Drive may be exposed through weak account security, public sharing links, former employee access, or missing backups.",
-      recommendedActions: [
-        "Enable multi-factor authentication",
-        "Review folder-sharing permissions",
-        "Remove former employees",
-        "Avoid public links for sensitive documents",
-        "Classify invoices and customer documents as confidential",
-        "Keep a separate backup",
-        "Record the access review as compliance evidence",
-      ],
-      evidenceToKeep: ["access review record", "MFA screenshot", "folder-sharing export", "backup log"],
-      nextStep: "Open Evidence Vault and record the Google Drive access review.",
+function buildResponse(mode: AssistantMode, overview: ReturnType<typeof buildOverview>, prompt: string): AssistantResponse {
+  const lowest = [...overview.domainScores].sort((left, right) => left.score - right.score)[0];
+  const topRisk = overview.topRisks[0];
+  const firstAction = overview.nextActions[0];
+  const report = overview.reportPreviews[0];
+  const promptText = prompt.toLowerCase();
+
+  if (mode === "Assessment") {
+    return {
+      mode,
+      explanation: `The latest readiness posture is ${overview.score.status.toLowerCase()} at ${overview.score.overall}%. ${lowest.label} is the weakest domain right now.`,
+      identifiedRisk:
+        topRisk?.title ??
+        "Readiness gaps can hide weak identity controls, missing vendor review, or incomplete incident preparation.",
+      recommendedActions: overview.nextActions.slice(0, 3).map((task) => task.title),
+      priority: lowest.status,
+      evidenceToKeep: ["assessment responses", "scorecard snapshot", "follow-up action log"],
+      nextStep: firstAction ? `Move to ${firstAction.title} and assign an owner.` : "Open the readiness module and submit a fresh assessment.",
       escalationNotice:
-        "Escalate to a cybersecurity expert, legal professional, or provider if personal data exposure, confirmed account compromise, or a customer data breach is suspected.",
-      screenshotUseCase: true,
-    },
-    "mfa guidance": {
-      ...common,
-      explanation: "MFA is one of the fastest ways to reduce cloud account takeover risk.",
-      identifiedRisk: "A stolen password can give an attacker access to email, files, AI tools, and administrator consoles.",
-      recommendedActions: ["Enable MFA for all users", "Require stronger MFA for admins", "Export or screenshot MFA status monthly"],
-      evidenceToKeep: ["MFA policy", "admin screenshot", "monthly access review"],
-      nextStep: "Open Controls and update the MFA control to in progress or implemented.",
-    },
-    "backup guidance": {
-      ...common,
-      explanation: "Backups help recover from accidental deletion, ransomware, and provider outages.",
-      identifiedRisk: "Business data may be unrecoverable if cloud sync is mistaken for backup.",
-      recommendedActions: ["Identify critical cloud data", "Schedule backups", "Test restoration", "Document backup owners"],
-      evidenceToKeep: ["backup log", "restore test note", "backup policy"],
-      nextStep: "Record backup evidence in the Evidence Vault.",
-    },
-    "vendor evaluation": {
-      ...common,
-      explanation: "Vendor evaluation checks whether a provider is safe enough for SME data and operations.",
-      identifiedRisk: "A weak provider can create data location, availability, deletion, export, and support risk.",
-      recommendedActions: ["Score MFA, encryption, backup, data location, support, contracts, and compliance documents"],
-      evidenceToKeep: ["contract", "SLA", "data-processing terms", "security documentation"],
-      nextStep: "Open Vendor Evaluation and score the provider.",
-    },
-    "incident response": {
-      ...common,
-      explanation: "Incident response should prioritize containment, preservation, and escalation.",
-      identifiedRisk: "Delayed action can increase data loss, account compromise, or legal exposure.",
-      recommendedActions: ["Record the incident time", "Preserve screenshots", "Revoke suspicious sessions", "Contact the provider"],
-      evidenceToKeep: ["incident log", "screenshots", "provider case number", "response timeline"],
-      nextStep: "Open Incidents and create a response record.",
-    },
-    "compliance evidence": {
-      ...common,
-      explanation: "Evidence proves controls were implemented and helps prepare for audit or management review.",
-      identifiedRisk: "Implemented controls may be unverifiable without screenshots, logs, policies, or registers.",
-      recommendedActions: ["Link evidence to controls", "Review rejected or expired evidence", "Keep report copies"],
-      evidenceToKeep: ["MFA screenshots", "access reviews", "risk register", "generated reports"],
-      nextStep: "Open Evidence Vault and add evidence for the highest-priority controls.",
-    },
-    "ai system inventory": {
-      ...common,
-      explanation: "An AI register shows which AI systems exist, who owns them, and what data they process.",
-      identifiedRisk: "Unregistered AI tools can process confidential or personal data without governance.",
-      recommendedActions: ["Register each AI system", "Assign an owner", "Record vendor and model/service", "Set a risk level"],
-      evidenceToKeep: ["AI register", "AI usage policy", "vendor review"],
-      nextStep: "Open AI System Inventory and add each AI tool currently in use.",
-    },
-    "risk scoring": {
-      ...common,
-      explanation: "FC237 scores risk by multiplying likelihood by impact.",
-      identifiedRisk: "Unscored risks are hard to prioritize and may leave critical gaps untreated.",
-      recommendedActions: ["Score likelihood from 1 to 5", "Score impact from 1 to 5", "Prioritize high and critical risks"],
-      evidenceToKeep: ["risk register", "treatment plan", "review notes"],
-      nextStep: "Open Risk Management and create or update a risk.",
-    },
-    "cloud readiness": {
-      ...common,
-      explanation: "Cloud readiness measures whether cloud services are inventoried, protected, backed up, and reviewed.",
-      identifiedRisk: "Weak inventory and missing controls make cloud adoption difficult to govern.",
-      recommendedActions: ["Complete readiness assessment", "Classify data", "Review MFA, backups, vendors, and incidents"],
-      evidenceToKeep: ["assessment summary", "cloud inventory", "control checklist"],
-      nextStep: "Run the Cloud Readiness assessment.",
-    },
-    "maturity assessment": {
-      ...common,
-      explanation: "Maturity shows how consistently governance, controls, compliance, vendors, and incidents are managed.",
-      identifiedRisk: "A low maturity level means controls may exist informally but are not repeatable.",
-      recommendedActions: ["Assess each maturity domain", "Identify weakest domain", "Create next-level improvement tasks"],
-      evidenceToKeep: ["maturity assessment", "improvement plan", "policy review"],
-      nextStep: "Open Governance Maturity and complete the assessment.",
-    },
-  };
+        "Escalate if the assessment reveals customer data exposure, missing administrative access control, or an unresolved critical risk.",
+      referencedScore: `${lowest.label}: ${lowest.score}%`,
+    };
+  }
 
-  return { intent, ...(responses[intent] ?? responses["cloud readiness"]) };
+  if (mode === "Evidence") {
+    return {
+      mode,
+      explanation: `Evidence coverage is ${overview.evidenceRollup.acceptedCoverage}% accepted and ${overview.evidenceRollup.submittedCoverage}% submitted across ${overview.evidenceRollup.requiredSlots} required slots.`,
+      identifiedRisk:
+        "Missing or expired evidence weakens assurance even when teams believe controls are in place.",
+      recommendedActions: [
+        "Link every required control to at least one submitted artifact.",
+        "Review expired or pending evidence first.",
+        "Capture reviewer names and comments when accepting evidence.",
+      ],
+      priority: overview.evidenceRollup.acceptedCoverage < 50 ? "High" : "Moderate",
+      evidenceToKeep: ["accepted screenshots", "review comments", "vendor documents", "policy approvals"],
+      nextStep: "Open the Evidence Vault and filter for pending, rejected, or expired records.",
+      escalationNotice:
+        "Escalate when a high-priority control has no evidence before an audit, customer review, or management report.",
+      referencedScore: `Evidence Coverage: ${overview.domainScores.find((item) => item.key === "evidence_coverage")?.score ?? 0}%`,
+    };
+  }
+
+  if (mode === "Incident") {
+    return {
+      mode,
+      explanation: `Incident readiness is ${overview.domainScores.find((item) => item.key === "incident_readiness")?.score ?? 0}%. ${overview.incidentRollup.unresolved} incidents are still unresolved.`,
+      identifiedRisk:
+        "Slow containment or poor documentation can extend business disruption and reduce legal or audit defensibility.",
+      recommendedActions: [
+        "Record scope, timeline, and evidence immediately.",
+        "Link the incident to the response policy and related controls.",
+        "Close the action plan task only after documenting resolution notes.",
+      ],
+      priority: overview.incidentRollup.unresolved > 0 ? "High" : "Moderate",
+      evidenceToKeep: ["incident timeline", "screenshots", "provider ticket reference", "closure note"],
+      nextStep: "Open the incidents module and update any open or monitoring cases.",
+      escalationNotice:
+        "Escalate immediately for ransomware, data leakage, confirmed account compromise, or regulated personal-data exposure.",
+      referencedScore: `Incident Readiness: ${overview.domainScores.find((item) => item.key === "incident_readiness")?.score ?? 0}%`,
+    };
+  }
+
+  if (mode === "Report") {
+    return {
+      mode,
+      explanation: `The current production-ready report is ${report.title}. It uses live dashboard scores, top risks, evidence coverage, and prioritized actions.`,
+      identifiedRisk:
+        "Reports become misleading when scores are stale or not backed by current linked records.",
+      recommendedActions: [
+        "Regenerate actions before creating the report.",
+        "Review top risks and missing evidence slots.",
+        "Confirm policy status and vendor gaps before exporting.",
+      ],
+      priority: overview.score.status,
+      evidenceToKeep: ["generated readiness summary PDF", "risk register preview", "action plan preview"],
+      nextStep: "Open Reports and generate the Compliance Readiness Summary PDF from current data.",
+      escalationNotice:
+        "Escalate if the report is being used for a contractual, legal, or regulatory submission and critical gaps remain unresolved.",
+      referencedScore: `Overall FC237 Score: ${overview.score.overall}%`,
+    };
+  }
+
+  if (mode === "Policy") {
+    const draftOrExpired = overview.policyRollup.draftOrExpired;
+    return {
+      mode,
+      explanation: `Policy maturity is ${overview.domainScores.find((item) => item.key === "policy_maturity")?.score ?? 0}%. ${draftOrExpired} policies are draft or expired.`,
+      identifiedRisk:
+        "Outdated or missing baseline policies weaken approval workflows, evidence collection, and incident discipline.",
+      recommendedActions: [
+        "Create any missing priority policy types first.",
+        "Advance draft policies to in review or approved.",
+        "Link policies to controls and supporting evidence.",
+      ],
+      priority: draftOrExpired > 0 ? "High" : "Moderate",
+      evidenceToKeep: ["policy approval note", "review date", "linked evidence references"],
+      nextStep: "Open the policy center and focus on draft, missing, or expired items.",
+      escalationNotice:
+        "Escalate if a required policy is missing while customer data, AI systems, or unresolved incidents are in scope.",
+      referencedScore: `Policy Maturity: ${overview.domainScores.find((item) => item.key === "policy_maturity")?.score ?? 0}%`,
+    };
+  }
+
+  if (mode === "Recommendation") {
+    const vendorWeak = overview.vendorRollup.weak;
+    const riskMessage =
+      promptText.includes("vendor") || vendorWeak > 0
+        ? `${vendorWeak} vendor reviews are currently weak or incomplete.`
+        : `${overview.riskRollup.highOrCritical} high or critical risks need treatment.`;
+    return {
+      mode,
+      explanation: `The platform recommends starting with the lowest domain, ${lowest.label}, then closing the highest-risk action items.`,
+      identifiedRisk: riskMessage,
+      recommendedActions: overview.nextActions.slice(0, 4).map((task) => task.title),
+      priority: lowest.status,
+      evidenceToKeep: ["action plan updates", "linked control evidence", "vendor review pack"],
+      nextStep: firstAction ? `Go to the action plan and progress "${firstAction.title}".` : "Generate the action plan from current data.",
+      escalationNotice:
+        "Escalate if a critical risk has no owner, no due date, or no linked control/evidence path.",
+      referencedScore: `${lowest.label}: ${lowest.score}%`,
+    };
+  }
+
+  return {
+    mode,
+    explanation: `Overall FC237 posture is ${overview.score.status.toLowerCase()} at ${overview.score.overall}%. ${overview.assistantInsight.summary}`,
+    identifiedRisk: topRisk?.title ?? "The main risk is losing sight of the next highest-value action.",
+    recommendedActions: overview.assistantInsight.recommendedActions,
+    priority: overview.score.status,
+    evidenceToKeep: ["dashboard snapshot", "risk register", "action plan summary"],
+    nextStep: firstAction ? `Start with "${firstAction.title}".` : "Open the dashboard and refresh the readiness workflow.",
+    escalationNotice:
+      "Escalate when a critical risk, missing incident capability, or unapproved customer-facing AI workflow remains open.",
+    referencedScore: `Overall FC237 Score: ${overview.score.overall}%`,
+  };
 }
 
 export const listSessions = query({
@@ -174,6 +205,9 @@ export const sendMessage = mutation({
   handler: async (ctx, args) => {
     const active = await getActiveOrganization(ctx);
     if (!active?.organization) throw new Error("Organization setup required");
+    const snapshot = await loadWorkspaceSnapshot(ctx, active.organization);
+    const overview = buildOverview(snapshot);
+    const report = buildComplianceReport(snapshot);
     const timestamp = now();
     const sessionId =
       args.sessionId ??
@@ -185,21 +219,25 @@ export const sendMessage = mutation({
         updatedAt: timestamp,
       }));
 
-    const intent = detectIntent(args.content);
-    const response = buildResponse(intent);
+    const mode = detectMode(args.content);
+    const response = buildResponse(mode, overview, args.content);
+    const assistantText =
+      mode === "Report"
+        ? `${response.explanation} ${report.summary}`
+        : response.explanation;
 
     await ctx.db.insert("chatMessages", {
       sessionId,
       senderType: "user",
       content: args.content,
-      detectedIntent: intent,
+      detectedIntent: mode,
       timestamp,
     });
     await ctx.db.insert("chatMessages", {
       sessionId,
       senderType: "assistant",
-      content: response.explanation,
-      detectedIntent: intent,
+      content: assistantText,
+      detectedIntent: mode,
       structuredResponse: response,
       timestamp: timestamp + 1,
     });
@@ -210,7 +248,7 @@ export const sendMessage = mutation({
       action: "assistant.message_sent",
       entityType: "chatSession",
       entityId: sessionId,
-      metadata: { intent },
+      metadata: { intent: mode },
     });
     return { sessionId, response };
   },

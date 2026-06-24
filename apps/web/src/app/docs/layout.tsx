@@ -4,7 +4,7 @@ import { RootProvider } from "fumadocs-ui/provider/next";
 import { baseOptions } from "@/lib/docs/layout.shared";
 import { source } from "@/lib/docs/source";
 
-export default function Layout({ children }: LayoutProps<"/docs">) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <RootProvider>
       <DocsLayout tree={source.getPageTree()} {...baseOptions()}>

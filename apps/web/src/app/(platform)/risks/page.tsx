@@ -1,4 +1,6 @@
 import { RisksPage } from "@/components/platform/modules";
 
-export default RisksPage;
+export default function RisksRoutePage() {
+  return <RisksPage />;
+}
 

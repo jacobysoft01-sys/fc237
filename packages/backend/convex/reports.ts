@@ -1,7 +1,8 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
-import { assertRole, getActiveOrganization, logAuditEvent, maturityLabel, now } from "./_shared";
+import { buildComplianceReport, buildOverview, loadWorkspaceSnapshot } from "./_engine";
+import { assertRole, getActiveOrganization, logAuditEvent, now } from "./_shared";
 
 export const list = query({
   args: {},
@@ -15,6 +16,21 @@ export const list = query({
   },
 });
 
+export const getPreview = query({
+  args: {},
+  handler: async (ctx) => {
+    const active = await getActiveOrganization(ctx);
+    if (!active?.organization) return null;
+    const snapshot = await loadWorkspaceSnapshot(ctx, active.organization);
+    const overview = buildOverview(snapshot);
+    return {
+      complianceSummary: buildComplianceReport(snapshot),
+      riskRegisterPreview: overview.topRisks,
+      actionPlanPreview: overview.nextActions,
+    };
+  },
+});
+
 export const generate = mutation({
   args: {
     reportType: v.string(),
@@ -23,29 +39,35 @@ export const generate = mutation({
     const active = await getActiveOrganization(ctx);
     if (!active?.organization || !active.membership) throw new Error("Organization setup required");
     assertRole(active.membership.role, ["owner", "admin", "consultant", "member"]);
-    const [risks, controls, evidence] = await Promise.all([
-      ctx.db.query("risks").withIndex("by_organization", (q) => q.eq("organizationId", active.organization._id)).collect(),
-      ctx.db.query("controls").withIndex("by_organization", (q) => q.eq("organizationId", active.organization._id)).collect(),
-      ctx.db.query("evidence").withIndex("by_organization", (q) => q.eq("organizationId", active.organization._id)).collect(),
-    ]);
-    const title = `${args.reportType.replaceAll("_", " ")} report`;
+    const snapshot = await loadWorkspaceSnapshot(ctx, active.organization);
+    const complianceReport = buildComplianceReport(snapshot);
+
+    const reportPayload =
+      args.reportType === "compliance_readiness_summary"
+        ? complianceReport
+        : {
+            title: args.reportType.replaceAll("_", " "),
+            summary:
+              args.reportType === "risk_register_preview"
+                ? `${snapshot.risks.length} risks tracked for preview reporting.`
+                : `${snapshot.tasks.length} action items tracked for preview reporting.`,
+            reportData:
+              args.reportType === "risk_register_preview"
+                ? complianceReport.reportData.topRisks
+                : complianceReport.reportData.nextActions,
+          };
+
     const id = await ctx.db.insert("reports", {
       organizationId: active.organization._id,
       reportType: args.reportType,
-      title,
-      summary: `${active.organization.name} has a readiness score of ${active.organization.readinessScore}% and maturity level ${active.organization.maturityLevel} (${maturityLabel(active.organization.maturityLevel)}).`,
-      readinessScore: active.organization.readinessScore,
-      maturityLevel: active.organization.maturityLevel,
-      reportData: {
-        organization: active.organization.name,
-        majorRisks: risks.filter((risk) => ["high", "critical"].includes(risk.riskLevel)).map((risk) => risk.title),
-        controls: controls.length,
-        evidence: evidence.length,
-        disclaimer:
-          "This report provides first-level cybersecurity governance and compliance guidance based on the FC237 Framework. It does not replace legal advice, formal audit, penetration testing, or professional cybersecurity assessment.",
-      },
+      title: reportPayload.title,
+      summary: reportPayload.summary,
+      readinessScore: snapshot.organization.readinessScore,
+      maturityLevel: snapshot.organization.maturityLevel,
+      reportData: reportPayload.reportData,
       generatedAt: now(),
     });
+
     await logAuditEvent(ctx, {
       organizationId: active.organization._id,
       userId: active.user._id,
@@ -57,4 +79,3 @@ export const generate = mutation({
     return id;
   },
 });
-

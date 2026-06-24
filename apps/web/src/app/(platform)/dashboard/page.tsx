@@ -5,25 +5,26 @@ import { Button, buttonVariants } from "@FC237/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@FC237/ui/components/card";
 import { useQuery } from "convex/react";
 import {
-  AlertTriangle,
-  Archive,
   ArrowRight,
   Bot,
-  BrainCircuit,
   Building2,
-  CheckCircle2,
   ClipboardCheck,
-  Cloud,
   FileText,
-  Gauge,
   ShieldCheck,
+  Sparkles,
+  TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/platform/page-header";
-import { DonutChart, MetricCard, ProgressLine, RadarChart, StatusBadge } from "@/components/platform/ui";
+import { ProgressLine, StatusBadge } from "@/components/platform/ui";
 
-const spark = [18, 25, 22, 27, 34, 32, 41, 45, 56, 58];
+function toneForStatus(status: string) {
+  if (status === "Critical" || status === "Weak" || status === "critical" || status === "high") return "red";
+  if (status === "Moderate" || status === "moderate") return "orange";
+  if (status === "Good" || status === "Strong" || status === "accepted" || status === "green") return "green";
+  return "purple";
+}
 
 export default function DashboardPage() {
   const overview = useQuery(api.dashboard.getOverview);
@@ -37,15 +38,15 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-3xl">
         <PageHeader
           icon={Building2}
-          title="Set up your SME organization"
-          description="Create your organization profile first so FC237 can isolate your data, seed the control catalog, and calculate dashboard metrics."
+          title="Set up the FC237 workspace"
+          description="Create the organization profile first so the command center can seed linked records and score the web app from real data."
         />
-        <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
           <CardContent className="flex flex-col gap-4 p-6">
             <p className="text-sm text-muted-foreground">
-              The SRS requires an SME organization profile before assessments, risk scoring, evidence, incidents, and reports can be linked safely.
+              Onboarding creates the expanded organization profile, baseline controls, a seeded readiness assessment, linked risks, vendor records, evidence, and the initial action plan.
             </p>
-        <Link className={buttonVariants()} href={"/onboarding" as any}>
+            <Link className={buttonVariants()} href="/onboarding">
               Start organization setup
               <ArrowRight data-icon="inline-end" />
             </Link>
@@ -55,188 +56,289 @@ export default function DashboardPage() {
     );
   }
 
-  const metrics = overview.metrics;
-  const cloudSegments = [
-    { label: "SaaS", value: overview.cloudBreakdown.find((item: any) => item.label === "SaaS")?.value ?? 0, color: "oklch(0.47 0.23 286)" },
-    { label: "IaaS", value: overview.cloudBreakdown.find((item: any) => item.label === "IaaS")?.value ?? 0, color: "oklch(0.68 0.18 286)" },
-    { label: "PaaS", value: overview.cloudBreakdown.find((item: any) => item.label === "PaaS")?.value ?? 0, color: "oklch(0.75 0.12 286)" },
-    { label: "Other", value: overview.cloudBreakdown.find((item: any) => item.label === "Other")?.value ?? 0, color: "oklch(0.84 0.08 286)" },
-  ];
-
   return (
     <div className="grid gap-6">
       <PageHeader
-        title={`Welcome back, ${overview.user?.fullName?.split(" ")[0] ?? "David"}`}
-        description={`Executive overview for ${overview.organization.name}. The most important FC237 compliance, cloud, and AI governance signals are visible first.`}
-      />
+        title={`Command Center for ${overview.organization.name}`}
+        description="Everything below is driven by stored platform data: seven domain scores, real evidence coverage, linked risks, and a generated action queue with no artificial score floors."
+      >
+        <div className="flex flex-wrap gap-2">
+          <Link href="/action-plan">
+            <Button>
+              <ClipboardCheck className="size-4" />
+              Open Action Plan
+            </Button>
+          </Link>
+          <Link href="/assistant">
+            <Button variant="outline">
+              <Sparkles className="size-4" />
+              Ask Assistant
+            </Button>
+          </Link>
+        </div>
+      </PageHeader>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard title="Overall Compliance Score" value={`${metrics.complianceScore}%`} description="+8% vs last assessment" icon={ShieldCheck} sparkline={spark} />
-        <MetricCard title="AI Systems" value={`${metrics.aiSystems}`} description={`${metrics.highAiSystems} high-risk systems`} icon={BrainCircuit} sparkline={[2, 2, 3, 3, 4, metrics.aiSystems]} />
-        <MetricCard title="Risk Score" value={metrics.riskScoreLabel} description={`${metrics.highRisks} high or critical risks`} icon={AlertTriangle} tone="red" sparkline={[20, 28, 24, 34, 42, 65]} />
-        <MetricCard title="Evidence Coverage" value={`${metrics.evidenceCoverage}%`} description="Audit artifact coverage" icon={Archive} tone="orange" sparkline={[42, 48, 55, 61, 72, metrics.evidenceCoverage]} />
-        <MetricCard title="Open Actions" value={`${metrics.openActions}`} description="Requires attention" icon={ClipboardCheck} sparkline={[18, 17, 15, 16, 14, metrics.openActions]} />
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <OverviewMetric
+          label="Overall FC237 Score"
+          value={`${overview.score.overall}%`}
+          detail={`Equal-weight average across seven domains. Current status: ${overview.score.status}.`}
+          tone={toneForStatus(overview.score.status)}
+        />
+        <OverviewMetric
+          label="Open Actions"
+          value={`${overview.nextActions.length}`}
+          detail="Highest-priority recommended actions currently visible in the queue."
+          tone={overview.nextActions.length > 0 ? "orange" : "green"}
+        />
+        <OverviewMetric
+          label="Urgent Risks"
+          value={`${overview.riskRollup.highOrCritical}`}
+          detail={`${overview.riskRollup.withoutControls} risks are still missing linked controls.`}
+          tone={overview.riskRollup.highOrCritical > 0 ? "red" : "green"}
+        />
+        <OverviewMetric
+          label="Evidence Coverage"
+          value={`${overview.evidenceRollup.acceptedCoverage}%`}
+          detail={`${overview.evidenceRollup.requiredSlots} required control slots tracked with ${overview.evidenceRollup.submittedCoverage}% submitted coverage.`}
+          tone={overview.evidenceRollup.acceptedCoverage >= 70 ? "green" : "orange"}
+        />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.25fr_1fr_360px]">
-        <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border">
+      <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Cloud & AI Inventory Overview</CardTitle>
+            <CardTitle>Domain Scores</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-[320px_1fr]">
-            <div>
-              <DonutChart segments={cloudSegments} />
-              <div className="mt-2 text-center">
-                <div className="text-3xl font-semibold">{overview.cloudServices.length}</div>
-                <div className="text-xs text-muted-foreground">Cloud services registered</div>
-              </div>
-            </div>
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Top Risks</h2>
-                <Link className="text-xs font-medium text-primary" href={"/risks" as any}>
-                  View all risks
-                </Link>
-              </div>
-              {overview.topRisks.map((risk: any) => (
-                <div className="grid gap-2 rounded-lg border p-3" key={risk._id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium">{risk.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        L{risk.likelihood} x I{risk.impact} = {risk.riskScore} • {risk.owner}
-                      </div>
-                    </div>
-                    <StatusBadge tone={risk.riskLevel === "critical" || risk.riskLevel === "high" ? "red" : "orange"}>{risk.riskLevel}</StatusBadge>
+          <CardContent className="grid gap-4">
+            {overview.domainScores.map((domain: any) => (
+              <div className="rounded-2xl border border-border/70 bg-background p-4" key={domain.key}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold">{domain.label}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">{domain.detail}</div>
                   </div>
-                  <p className="text-xs text-muted-foreground">{risk.remediationStatus}</p>
+                  <StatusBadge tone={toneForStatus(domain.status)}>{domain.status}</StatusBadge>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+                  <span>{domain.score}%</span>
+                  <span className="text-muted-foreground">Real stored-data score</span>
+                </div>
+                <div className="mt-2">
+                  <ProgressLine value={domain.score} tone={domain.score >= 70 ? "green" : domain.score >= 45 ? "orange" : "red"} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-0 bg-primary/[0.03] shadow-sm ring-1 ring-primary/15">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Bot className="size-4" />
+              Assistant Insight
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="rounded-2xl border border-primary/15 bg-background p-4">
+              <div className="flex items-center gap-2">
+                <StatusBadge tone="purple">{overview.assistantInsight.mode}</StatusBadge>
+                <StatusBadge tone={toneForStatus(overview.score.status)}>{overview.score.status}</StatusBadge>
+              </div>
+              <h2 className="mt-3 text-base font-semibold">{overview.assistantInsight.title}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{overview.assistantInsight.summary}</p>
+            </div>
+            <div className="grid gap-2">
+              {overview.assistantInsight.recommendedActions.map((action: string) => (
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-3 text-sm" key={action}>
+                  {action}
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border">
-          <CardHeader>
-            <CardTitle>Governance Maturity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadarChart domains={overview.maturityDomains} />
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Level {metrics.maturityLevel}</span>
-                <StatusBadge tone="purple">{metrics.maturityLabel}</StatusBadge>
-              </div>
-              <ProgressLine value={(metrics.maturityLevel / 5) * 100} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-lg border-0 bg-primary/[0.03] shadow-sm ring-1 ring-primary/15">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Bot />
-              FC237 Assistant
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <p className="text-sm text-muted-foreground">
-              Run assessments, score risks, recommend controls, evaluate vendors, and get incident response guidance.
-            </p>
-            {[
-              ["Run Cloud Readiness Assessment", "/readiness", Cloud],
-              ["Check my Risk Score", "/risks", Gauge],
-              ["Recommend Controls", "/controls", CheckCircle2],
-              ["Evaluate a Vendor", "/vendors", Building2],
-              ["Incident Response Guidance", "/incidents", AlertTriangle],
-            ].map(([label, href, Icon]: any) => (
-              <Link className="flex items-center gap-3 rounded-lg border bg-background px-3 py-3 text-sm font-medium hover:bg-muted" href={href as any} key={label}>
-                <Icon />
-                {label}
-              </Link>
-            ))}
-            <Link className={buttonVariants({ variant: "outline" })} href={"/assistant" as any}>
-              Ask anything
+            <Link className={buttonVariants({ variant: "outline" })} href="/assistant">
+              Open Assistant
               <ArrowRight data-icon="inline-end" />
             </Link>
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-3">
-        <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border">
+      <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr]">
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
+            <CardTitle>Recommended Next Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
-            {overview.activity.length === 0 ? <p className="text-sm text-muted-foreground">No activity yet.</p> : null}
-            {overview.activity.map((item: any) => (
-              <div className="flex items-center justify-between gap-3 text-sm" key={item._id}>
-                <span>{item.action.replaceAll(".", " ")}</span>
-                <span className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</span>
-              </div>
-            ))}
+            {overview.nextActions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No active recommended actions are open right now.</p>
+            ) : (
+              overview.nextActions.map((task: any) => (
+                <div className="rounded-2xl border border-border/70 bg-background p-4" key={task._id}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold">{task.title}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">{task.description ?? "Generated from live platform conditions."}</div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusBadge tone={toneForStatus(task.priority)}>{task.priority}</StatusBadge>
+                      <StatusBadge tone={toneForStatus(task.status)}>{task.status}</StatusBadge>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    Due {task.dueDate} • {task.sourceType.replaceAll("_", " ")}
+                  </div>
+                </div>
+              ))
+            )}
+            <Link className={buttonVariants({ variant: "outline" })} href="/action-plan">
+              Manage Full Action Plan
+              <ArrowRight data-icon="inline-end" />
+            </Link>
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Compliance Frameworks</CardTitle>
+            <CardTitle>Risk Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <OverviewLine label="Critical" value={`${overview.riskRollup.byLevel.critical}`} />
+            <OverviewLine label="High" value={`${overview.riskRollup.byLevel.high}`} />
+            <OverviewLine label="Moderate" value={`${overview.riskRollup.byLevel.moderate}`} />
+            <OverviewLine label="Low" value={`${overview.riskRollup.byLevel.low}`} />
+            <div className="pt-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Top Risks</div>
+              <div className="mt-3 grid gap-2">
+                {overview.topRisks.map((risk: any) => (
+                  <div className="rounded-xl bg-muted/25 p-3" key={risk._id}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-semibold">{risk.title}</div>
+                      <StatusBadge tone={toneForStatus(risk.riskLevel)}>{risk.riskLevel}</StatusBadge>
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Score {risk.riskScore} • {risk.owner}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+          <CardHeader>
+            <CardTitle>Evidence Coverage</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            <OverviewLine label="Required Control Slots" value={`${overview.evidenceRollup.requiredSlots}`} />
+            <OverviewLine label="Submitted Coverage" value={`${overview.evidenceRollup.submittedCoverage}%`} />
+            <OverviewLine label="Accepted Coverage" value={`${overview.evidenceRollup.acceptedCoverage}%`} />
+            <OverviewLine label="Expired Items" value={`${overview.evidenceRollup.expiringCount}`} />
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+              Missing evidence slots are created from controls that require proof and do not yet have submitted or accepted artifacts.
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+          <CardHeader>
+            <CardTitle>Readiness and Maturity Support</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {overview.frameworks.map((framework: any) => (
-              <div className="grid gap-2" key={framework.name}>
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="font-medium">{framework.name}</span>
-                  <StatusBadge tone={framework.progress > 0 ? "green" : "neutral"}>{framework.status}</StatusBadge>
+            <OverviewLine label="Latest Readiness Score" value={`${overview.readiness.latestAssessmentScore}%`} />
+            <OverviewLine label="Maturity Level" value={`${overview.maturitySupport.level} - ${overview.maturitySupport.label}`} />
+            <div className="grid gap-3 md:grid-cols-2">
+              {overview.maturitySupport.domains.map((domain: any) => (
+                <div className="rounded-xl border border-border/70 bg-background p-3" key={domain.key}>
+                  <div className="text-sm font-semibold">{domain.domain}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">{domain.score}/5</div>
                 </div>
-                <ProgressLine value={framework.progress} />
-              </div>
-            ))}
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Upcoming Tasks</CardTitle>
+            <CardTitle>Report and Activity Signals</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3">
-            {overview.tasks.map((task: any) => (
-              <div className="grid grid-cols-[52px_1fr] gap-3" key={task._id}>
-                <div className="rounded-lg bg-primary/10 px-2 py-2 text-center text-xs font-semibold text-primary">
-                  {new Date(task.dueDate).toLocaleDateString("en", { month: "short", day: "2-digit" })}
+          <CardContent className="grid gap-4">
+            <div className="grid gap-3">
+              {overview.reportPreviews.map((report: any) => (
+                <div className="rounded-2xl border border-border/70 bg-background p-4" key={report.key}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold">{report.title}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">{report.summary}</div>
+                    </div>
+                    <FileText className="size-4 text-muted-foreground" />
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium">{task.title}</div>
-                  <div className="text-xs text-muted-foreground">{task.priority} priority</div>
-                </div>
+              ))}
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <TriangleAlert className="size-4 text-primary" />
+                Recent activity
               </div>
-            ))}
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                {overview.recentActivity.length === 0 ? (
+                  <span>No recent audit events yet.</span>
+                ) : (
+                  overview.recentActivity.map((item: any) => (
+                    <div className="flex items-center justify-between gap-3" key={item._id}>
+                      <span>{item.action.replaceAll(".", " ")}</span>
+                      <span>{new Date(item.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+            <Link className={buttonVariants({ variant: "outline" })} href="/reports">
+              Open Reports
+              <ArrowRight data-icon="inline-end" />
+            </Link>
           </CardContent>
         </Card>
       </section>
+    </div>
+  );
+}
 
-      <section className="grid gap-4 rounded-lg bg-primary p-6 text-primary-foreground lg:grid-cols-[1.3fr_repeat(4,1fr)_auto] lg:items-center">
-        <div>
-          <h2 className="text-lg font-semibold">About the FC237 Framework</h2>
-          <p className="mt-1 text-sm opacity-90">A practical cybersecurity governance and compliance framework for SMEs in Cameroon, extended for AI governance readiness.</p>
-        </div>
-        {[
-          ["5", "Domains"],
-          ["20+", "Control Areas"],
-          ["100+", "Best Practices"],
-          ["SME", "Focused"],
-        ].map(([value, label]) => (
-          <div className="rounded-lg bg-white/10 p-4 text-center" key={label}>
-            <div className="text-2xl font-semibold">{value}</div>
-            <div className="text-xs opacity-85">{label}</div>
+function OverviewMetric({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "purple" | "green" | "orange" | "red";
+}) {
+  return (
+    <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border/80">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+            <div className="mt-3 text-3xl font-semibold tracking-tight">{value}</div>
+            <div className="mt-3 text-sm text-muted-foreground">{detail}</div>
           </div>
-        ))}
-        <Link className={buttonVariants({ variant: "secondary" })} href={"/framework" as any}>
-          Explore Framework
-          <ArrowRight data-icon="inline-end" />
-        </Link>
-      </section>
+          <StatusBadge tone={tone}>{label === "Overall FC237 Score" ? "live" : "tracked"}</StatusBadge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OverviewLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background px-3 py-3 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }
@@ -244,13 +346,13 @@ export default function DashboardPage() {
 function DashboardSkeleton() {
   return (
     <div className="grid gap-6">
-      <div className="h-16 rounded-lg bg-muted" />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div className="h-44 rounded-lg bg-muted" key={index} />
+      <div className="h-16 rounded-2xl bg-muted" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div className="h-40 rounded-2xl bg-muted" key={index} />
         ))}
       </div>
-      <div className="h-96 rounded-lg bg-muted" />
+      <div className="h-80 rounded-2xl bg-muted" />
     </div>
   );
 }

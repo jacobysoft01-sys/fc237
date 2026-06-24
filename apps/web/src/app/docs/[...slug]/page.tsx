@@ -4,7 +4,11 @@ import { source } from "@/lib/docs/source";
 
 import { getDocsMetadata, renderDocsPage } from "../page.shared";
 
-export default async function Page(props: PageProps<"/docs/[...slug]">) {
+type DocsPageProps = {
+  params: Promise<{ slug: string[] }>;
+};
+
+export default async function Page(props: DocsPageProps) {
   const params = await props.params;
   return renderDocsPage(params.slug);
 }
@@ -14,7 +18,7 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata(
-  props: PageProps<"/docs/[...slug]">,
+  props: DocsPageProps,
 ): Promise<Metadata> {
   const params = await props.params;
   return getDocsMetadata(params.slug);
