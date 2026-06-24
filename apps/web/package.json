@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "docs:generate": "fumadocs-mdx",
-    "dev": "pnpm run docs:generate && next dev --port 3001",
-    "build": "pnpm run docs:generate && next build",
+    "dev": "fumadocs-mdx && next dev --port 3001",
+    "build": "fumadocs-mdx && next build",
     "start": "next start",
-    "postinstall": "pnpm run docs:generate"
+    "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
     "@FC237/backend": "workspace:*",

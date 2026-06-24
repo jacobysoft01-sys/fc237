@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npx -y pnpm@10.22.0 install --frozen-lockfile --filter ./apps/web...",
+  "buildCommand": "npx -y pnpm@10.22.0 --filter ./apps/web build"
+}

@@ -1,5 +1,6 @@
 packages:
-  - apps/*
+  - apps/native
+  - apps/web
   - packages/*
 allowBuilds:
   msw: true
