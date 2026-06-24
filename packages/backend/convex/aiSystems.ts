@@ -32,6 +32,8 @@ export const create = mutation({
     internalExternalFlag: v.optional(v.string()),
     usePurpose: v.optional(v.string()),
     reviewDate: v.optional(v.string()),
+    dataTypesProcessed: v.optional(v.array(v.string())),
+    personalDataFlag: v.optional(v.boolean()),
     personalDataFlags: v.optional(v.array(v.string())),
     sensitiveDataFlag: v.optional(v.boolean()),
     customerFacingFlag: v.optional(v.boolean()),

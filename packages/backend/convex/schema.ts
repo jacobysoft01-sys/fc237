@@ -25,6 +25,11 @@ const organizationBrandingValidator = v.object({
   primaryColor: v.optional(v.string()),
   accentColor: v.optional(v.string()),
   logoUrl: v.optional(v.string()),
+  reportHeader: v.optional(v.string()),
+  reportFooter: v.optional(v.string()),
+  signatureName: v.optional(v.string()),
+  signatureTitle: v.optional(v.string()),
+  contactInformation: v.optional(v.string()),
 });
 
 const frameworkMappingDetailsValidator = v.object({
@@ -162,6 +167,8 @@ export default defineSchema({
     internalExternalFlag: v.optional(v.string()),
     usePurpose: v.optional(v.string()),
     reviewDate: v.optional(v.string()),
+    dataTypesProcessed: v.optional(v.array(v.string())),
+    personalDataFlag: v.optional(v.boolean()),
     personalDataFlags: v.optional(v.array(v.string())),
     sensitiveDataFlag: v.optional(v.boolean()),
     customerFacingFlag: v.optional(v.boolean()),
@@ -330,6 +337,8 @@ export default defineSchema({
     owner: v.optional(v.string()),
     resolutionSummary: v.optional(v.string()),
     resolvedAt: v.optional(v.string()),
+    relatedRiskId: v.optional(v.id("risks")),
+    relatedAssetId: v.optional(v.id("dataAssets")),
     relatedPolicyId: v.optional(v.id("policies")),
     relatedControlIds: v.optional(v.array(v.id("controls"))),
     relatedEvidenceIds: v.optional(v.array(v.id("evidence"))),

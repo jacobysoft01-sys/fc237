@@ -28,6 +28,11 @@ const brandingValidator = v.object({
   primaryColor: v.optional(v.string()),
   accentColor: v.optional(v.string()),
   logoUrl: v.optional(v.string()),
+  reportHeader: v.optional(v.string()),
+  reportFooter: v.optional(v.string()),
+  signatureName: v.optional(v.string()),
+  signatureTitle: v.optional(v.string()),
+  contactInformation: v.optional(v.string()),
 });
 
 export const getCurrent = query({
@@ -90,6 +95,11 @@ export const create = mutation({
         primaryColor: args.branding?.primaryColor ?? "#0f766e",
         accentColor: args.branding?.accentColor ?? "#f59e0b",
         logoUrl: args.branding?.logoUrl,
+        reportHeader: args.branding?.reportHeader,
+        reportFooter: args.branding?.reportFooter,
+        signatureName: args.branding?.signatureName,
+        signatureTitle: args.branding?.signatureTitle,
+        contactInformation: args.branding?.contactInformation,
       },
       readinessScore: 0,
       maturityLevel: 2,

@@ -25,8 +25,11 @@ export const create = mutation({
     severity: v.string(),
     detectedAt: v.string(),
     owner: v.optional(v.string()),
+    relatedRiskId: v.optional(v.id("risks")),
+    relatedAssetId: v.optional(v.id("dataAssets")),
     relatedPolicyId: v.optional(v.id("policies")),
     relatedControlIds: v.optional(v.array(v.id("controls"))),
+    relatedEvidenceIds: v.optional(v.array(v.id("evidence"))),
   },
   handler: async (ctx, args) => {
     const active = await getActiveOrganization(ctx);
@@ -48,8 +51,11 @@ export const create = mutation({
       ],
       escalationRecommended,
       owner: args.owner,
+      relatedRiskId: args.relatedRiskId,
+      relatedAssetId: args.relatedAssetId,
       relatedPolicyId: args.relatedPolicyId,
       relatedControlIds: args.relatedControlIds,
+      relatedEvidenceIds: args.relatedEvidenceIds,
       createdAt: now(),
     });
 
