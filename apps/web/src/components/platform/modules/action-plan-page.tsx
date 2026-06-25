@@ -2,22 +2,149 @@
 
 import { api } from "@FC237/backend/convex/_generated/api";
 import { Button } from "@FC237/ui/components/button";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, usePreloadedQuery, useQuery } from "convex/react";
+import type { Preloaded } from "convex/react";
 import { ClipboardCheck, RefreshCcw } from "lucide-react";
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 
 import { EmptyState, FilterButton, ModulePage, SectionCard, SummaryGrid, priorityTone, statusTone } from "@/components/platform/modules/shared";
 import { StatusBadge } from "@/components/platform/ui";
+import type { ConvexLoadState } from "@/lib/convex-page-load";
 
-export function ActionPlanPage() {
+function actionPlanArgs(priority?: string, status?: string, sourceType?: string) {
+  return {
+    ...(priority ? { priority } : {}),
+    ...(status ? { status } : {}),
+    ...(sourceType ? { sourceType } : {}),
+  };
+}
+
+export function ActionPlanPage({
+  preloadedActionPlan,
+  loadState,
+}: {
+  preloadedActionPlan?: Preloaded<typeof api.tasks.getActionPlan> | null;
+  loadState?: ConvexLoadState | null;
+}) {
+  if (preloadedActionPlan) {
+    return <ActionPlanPageWithPreloaded loadState={loadState} preloadedActionPlan={preloadedActionPlan} />;
+  }
+  return <ActionPlanPageWithLiveQuery loadState={loadState} />;
+}
+
+function ActionPlanPageWithPreloaded({
+  preloadedActionPlan,
+  loadState,
+}: {
+  preloadedActionPlan: Preloaded<typeof api.tasks.getActionPlan>;
+  loadState?: ConvexLoadState | null;
+}) {
   const [priority, setPriority] = useState<string>();
   const [status, setStatus] = useState<string>();
   const [sourceType, setSourceType] = useState<string>();
-  const actionPlan = useQuery(api.tasks.getActionPlan, { priority, status, sourceType });
+  const actionPlan = usePreloadedQuery(preloadedActionPlan);
+  const filteredActionPlan = useQuery(api.tasks.getActionPlan, actionPlanArgs(priority, status, sourceType));
+  const visibleActionPlan = !priority && !status && !sourceType ? actionPlan : filteredActionPlan;
   const updateStatus = useMutation(api.tasks.updateStatus);
   const regenerate = useMutation(api.tasks.regenerateGenerated);
+  const convexAuth = useConvexAuth();
 
+  return (
+    <ActionPlanPageContent
+      actionPlan={visibleActionPlan}
+      convexAuth={convexAuth}
+      loadState={loadState}
+      regenerate={regenerate}
+      setPriority={setPriority}
+      setSourceType={setSourceType}
+      setStatus={setStatus}
+      status={status}
+      sourceType={sourceType}
+      priority={priority}
+      updateStatus={updateStatus}
+    />
+  );
+}
+
+function ActionPlanPageWithLiveQuery({ loadState }: { loadState?: ConvexLoadState | null }) {
+  const [priority, setPriority] = useState<string>();
+  const [status, setStatus] = useState<string>();
+  const [sourceType, setSourceType] = useState<string>();
+  const actionPlan = useQuery(api.tasks.getActionPlan, actionPlanArgs(priority, status, sourceType));
+  const updateStatus = useMutation(api.tasks.updateStatus);
+  const regenerate = useMutation(api.tasks.regenerateGenerated);
+  const convexAuth = useConvexAuth();
+
+  return (
+    <ActionPlanPageContent
+      actionPlan={actionPlan}
+      convexAuth={convexAuth}
+      loadState={loadState}
+      regenerate={regenerate}
+      setPriority={setPriority}
+      setSourceType={setSourceType}
+      setStatus={setStatus}
+      status={status}
+      sourceType={sourceType}
+      priority={priority}
+      updateStatus={updateStatus}
+    />
+  );
+}
+
+function ActionPlanPageContent({
+  actionPlan,
+  convexAuth,
+  loadState,
+  regenerate,
+  setPriority,
+  setSourceType,
+  setStatus,
+  status,
+  sourceType,
+  priority,
+  updateStatus,
+}: {
+  actionPlan: any;
+  convexAuth: ReturnType<typeof useConvexAuth>;
+  loadState?: ConvexLoadState | null;
+  regenerate: any;
+  setPriority: Dispatch<SetStateAction<string | undefined>>;
+  setSourceType: Dispatch<SetStateAction<string | undefined>>;
+  setStatus: Dispatch<SetStateAction<string | undefined>>;
+  status?: string;
+  sourceType?: string;
+  priority?: string;
+  updateStatus: any;
+}) {
   if (!actionPlan) {
+    if (loadState?.message) {
+      return (
+        <ModulePage
+          title="Action Plan"
+          description="Generated and manual action items stay in one execution queue with linked context to risks, controls, evidence, vendors, incidents, and assessments."
+          icon={ClipboardCheck}
+        >
+          <SectionCard title="Convex data is not loading">
+            <div className="grid gap-4">
+              <div className="rounded-2xl border border-orange-500/25 bg-orange-500/8 px-4 py-4 text-sm text-orange-100 dark:text-orange-200">
+                {loadState.message}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-border/70 bg-background px-4 py-3 text-sm">
+                  <div className="font-medium">Convex public health</div>
+                  <div className="mt-1 text-muted-foreground">{loadState.publicReachable ? "Available" : "Needs attention"}</div>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background px-4 py-3 text-sm">
+                  <div className="font-medium">Clerk JWT for Convex</div>
+                  <div className="mt-1 text-muted-foreground">{loadState.tokenReady ? "Available" : "Needs attention"}</div>
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        </ModulePage>
+      );
+    }
     return (
       <ModulePage
         title="Action Plan"
@@ -73,6 +200,14 @@ export function ActionPlanPage() {
       }
       form={null}
     >
+      {!convexAuth.isLoading && !convexAuth.isAuthenticated ? (
+        <SectionCard title="Live sync pending">
+          <div className="rounded-2xl border border-orange-500/25 bg-orange-500/8 px-4 py-3 text-sm text-orange-100 dark:text-orange-200">
+            Showing a server-loaded snapshot. Live Convex sync is not authenticated yet, so refreshing filters or updating task state may stay limited until Clerk and Convex auth are aligned.
+          </div>
+        </SectionCard>
+      ) : null}
+
       <SectionCard title="Filters" description="Narrow the queue without leaving the page.">
         <div className="grid gap-4">
           <div>
