@@ -9,7 +9,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.97_0.03_186),transparent_30rem),radial-gradient(circle_at_top_right,oklch(0.955_0.026_78),transparent_28rem),linear-gradient(180deg,oklch(0.995_0.008_95),oklch(0.983_0.012_210))]">
+    <main className="min-h-screen bg-transparent">
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8">
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">

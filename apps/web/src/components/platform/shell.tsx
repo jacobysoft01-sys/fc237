@@ -105,9 +105,9 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
   }, [isLoaded, isSignedIn, upsertUser]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,oklch(0.97_0.03_186),transparent_34rem),radial-gradient(circle_at_top_right,oklch(0.955_0.025_78),transparent_30rem),linear-gradient(180deg,oklch(0.995_0.008_95),oklch(0.982_0.01_210))] text-foreground">
+    <div className="min-h-screen bg-transparent text-foreground">
       <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
-        <aside className="hidden border-r bg-background/92 backdrop-blur lg:block">
+        <aside className="hidden border-r bg-background/84 backdrop-blur lg:block dark:bg-background/72">
           <div className="flex h-full flex-col">
             <Link href="/dashboard" className="flex items-center gap-3 px-6 py-6">
               <div className="flex size-12 items-center justify-center rounded-[1.5rem] bg-primary text-primary-foreground shadow-md shadow-primary/20">
@@ -138,7 +138,7 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
               ))}
             </nav>
 
-            <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/95 p-4 shadow-sm">
+            <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/90 p-4 shadow-sm dark:bg-card/86">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
                   {(current?.organization?.name ?? "FC").slice(0, 2).toUpperCase()}
@@ -153,7 +153,7 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-20 border-b bg-background/86 backdrop-blur">
+          <header className="sticky top-0 z-20 border-b bg-background/82 backdrop-blur dark:bg-background/68">
             <div className="flex min-h-20 flex-wrap items-center justify-between gap-4 px-4 py-4 lg:px-8">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 lg:hidden">
@@ -197,7 +197,7 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
                   <Link
                     className={cn(
                       "inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-medium",
-                      active ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                      active ? "bg-primary/12 text-primary dark:bg-primary/16" : "text-muted-foreground hover:text-foreground",
                     )}
                     href={item.href}
                     key={item.href}
@@ -229,7 +229,9 @@ function NavLink({
       href={item.href}
       className={cn(
         "grid grid-cols-[20px_1fr] items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
-        active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+        active
+          ? "bg-primary/12 text-primary shadow-sm dark:bg-primary/16"
+          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
       )}
     >
       <Icon className="size-4" />

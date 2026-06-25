@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "docs:generate": "fumadocs-mdx",
-    "dev": "fumadocs-mdx && next dev --port 3001",
-    "build": "fumadocs-mdx && next build",
+    "dev": "node ./scripts/run-next-with-generated-docs.mjs dev",
+    "build": "node ./scripts/run-next-with-generated-docs.mjs build",
     "check-types": "tsc --noEmit",
     "start": "next start",
     "postinstall": "fumadocs-mdx"

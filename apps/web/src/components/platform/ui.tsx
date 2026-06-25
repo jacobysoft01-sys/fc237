@@ -10,12 +10,17 @@ export function StatusBadge({
   tone?: "neutral" | "purple" | "green" | "yellow" | "red" | "orange";
 }) {
   const tones = {
-    neutral: "border border-slate-200/70 bg-white/75 text-slate-600 shadow-sm",
-    purple: "border border-primary/15 bg-primary/12 text-primary shadow-sm",
-    green: "border border-emerald-200/70 bg-emerald-50/90 text-emerald-700 shadow-sm",
-    yellow: "border border-amber-200/70 bg-amber-50/90 text-amber-700 shadow-sm",
-    orange: "border border-orange-200/70 bg-orange-50/90 text-orange-700 shadow-sm",
-    red: "border border-rose-200/70 bg-rose-50/90 text-rose-700 shadow-sm",
+    neutral:
+      "border border-border/70 bg-background/78 text-muted-foreground shadow-sm dark:bg-muted/35 dark:text-foreground/80",
+    purple: "border border-primary/15 bg-primary/12 text-primary shadow-sm dark:border-primary/25 dark:bg-primary/16",
+    green:
+      "border border-emerald-200/70 bg-emerald-50/90 text-emerald-700 shadow-sm dark:border-emerald-400/25 dark:bg-emerald-500/12 dark:text-emerald-300",
+    yellow:
+      "border border-amber-200/70 bg-amber-50/90 text-amber-700 shadow-sm dark:border-amber-400/25 dark:bg-amber-500/12 dark:text-amber-300",
+    orange:
+      "border border-orange-200/70 bg-orange-50/90 text-orange-700 shadow-sm dark:border-orange-400/25 dark:bg-orange-500/12 dark:text-orange-300",
+    red:
+      "border border-rose-200/70 bg-rose-50/90 text-rose-700 shadow-sm dark:border-rose-400/25 dark:bg-rose-500/12 dark:text-rose-300",
   };
   return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
 }
@@ -50,10 +55,10 @@ export function MetricCard({
   sparkline?: number[];
 }) {
   const toneClasses = {
-    purple: "bg-primary/10 text-primary",
-    green: "bg-emerald-50 text-emerald-600",
-    red: "bg-red-50 text-red-600",
-    orange: "bg-orange-50 text-orange-600",
+    purple: "bg-primary/10 text-primary dark:bg-primary/16",
+    green: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/12 dark:text-emerald-300",
+    red: "bg-red-50 text-red-600 dark:bg-red-500/12 dark:text-red-300",
+    orange: "bg-orange-50 text-orange-600 dark:bg-orange-500/12 dark:text-orange-300",
   };
 
   return (
@@ -183,4 +188,3 @@ export function RadarChart({ domains }: { domains: { domain: string; score: numb
     </svg>
   );
 }
-
