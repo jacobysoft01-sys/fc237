@@ -35,6 +35,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
+import type { ConvexLoadState } from "@/lib/convex-page-load";
 
 type NavItem = { href: Route; label: string; helper: string; icon: LucideIcon };
 type NavGroup = { title: string; items: NavItem[] };
@@ -92,17 +93,23 @@ const navGroups: NavGroup[] = [
 
 const flatNavItems = navGroups.flatMap((group) => group.items);
 
-export default function PlatformShell({ children }: { children: React.ReactNode }) {
+export default function PlatformShell({
+  children,
+  loadState,
+}: {
+  children: React.ReactNode;
+  loadState?: ConvexLoadState | null;
+}) {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useUser();
   const upsertUser = useMutation(api.users.upsertCurrent);
   const current = useQuery(api.organizations.getCurrent);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
+    if (isLoaded && isSignedIn && !loadState?.message) {
       void upsertUser();
     }
-  }, [isLoaded, isSignedIn, upsertUser]);
+  }, [isLoaded, isSignedIn, loadState?.message, upsertUser]);
 
   return (
     <div className="min-h-screen bg-transparent text-foreground">
@@ -141,11 +148,15 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
             <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/90 p-4 shadow-sm dark:bg-card/86">
               <div className="flex items-center gap-3">
                 <div className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                  {(current?.organization?.name ?? "FC").slice(0, 2).toUpperCase()}
+                  {(current?.organization?.name ?? (loadState?.message ? "CV" : "FC")).slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{current?.organization?.name ?? "Create an organization"}</div>
-                  <div className="text-xs text-muted-foreground">{current?.membership?.role ?? "No active workspace"}</div>
+                  <div className="truncate text-sm font-medium">
+                    {current?.organization?.name ?? (loadState?.message ? "Convex connection needs attention" : "Create an organization")}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {current?.membership?.role ?? (loadState?.message ? "Check deployment and auth alignment" : "No active workspace")}
+                  </div>
                 </div>
               </div>
             </div>
@@ -189,6 +200,14 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
                 </Show>
               </div>
             </div>
+            {loadState?.message ? (
+              <div className="border-t border-orange-500/15 bg-orange-50/80 px-4 py-3 text-sm text-orange-800 dark:bg-orange-500/10 dark:text-orange-200 lg:px-8">
+                <div className="flex flex-wrap items-start gap-2">
+                  <span className="font-medium">Convex setup check:</span>
+                  <span>{convexSetupMessage(loadState)}</span>
+                </div>
+              </div>
+            ) : null}
             <nav className="flex gap-2 overflow-x-auto border-t px-4 py-2 lg:hidden">
               {flatNavItems.map((item) => {
                 const Icon = item.icon;
@@ -214,6 +233,18 @@ export default function PlatformShell({ children }: { children: React.ReactNode 
       </div>
     </div>
   );
+}
+
+function convexSetupMessage(loadState: ConvexLoadState) {
+  if (!loadState.publicReachable) {
+    return "The web app cannot reach the Convex deployment. Verify NEXT_PUBLIC_CONVEX_URL points to the Convex Cloud URL and deploy the latest Convex backend.";
+  }
+
+  if (!loadState.tokenReady) {
+    return "Clerk sign-in worked, but the Convex JWT is missing. Create a Clerk JWT template named convex and set CLERK_JWT_ISSUER_DOMAIN in the Convex dashboard.";
+  }
+
+  return "Convex is reachable and the JWT exists, but protected queries still failed. Deploy the latest Convex schema/functions and confirm the Clerk issuer matches this deployment.";
 }
 
 function NavLink({

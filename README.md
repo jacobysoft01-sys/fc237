@@ -35,6 +35,29 @@ Follow the prompts to create a new Convex project and connect it to your applica
 
 Copy environment variables from `packages/backend/.env.local` to `apps/*/.env`.
 
+### Production Convex and Clerk wiring
+
+For hosted web deployments, the important distinction is:
+
+- `NEXT_PUBLIC_CONVEX_URL` must use the Convex **Cloud URL**: `https://<deployment>.convex.cloud`
+- Do **not** use the HTTP Actions URL (`https://<deployment>.convex.site`) for `NEXT_PUBLIC_CONVEX_URL`
+
+Required production values:
+
+- Vercel: `NEXT_PUBLIC_CONVEX_URL`
+- Vercel: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- Vercel: `CLERK_SECRET_KEY`
+- Convex dashboard environment: `CLERK_JWT_ISSUER_DOMAIN`
+- Convex dashboard environment: `OPENAI_API_KEY` if you want the assistant enabled in production
+
+Required production alignment:
+
+- Deploy the Convex backend separately from Vercel with `pnpm --filter @FC237/backend dev:setup` the first time, then `npx convex deploy`
+- Create a Clerk JWT template named `convex`
+- Set the Convex auth issuer to the same Clerk issuer used by that `convex` JWT template
+
+If the FC237 shell shows a Convex setup banner after sign-in, the web app rendered successfully but Convex deployment, URL, or Clerk-to-Convex auth alignment still needs attention.
+
 ### Clerk Authentication Setup
 
 - Follow the guide: [Convex + Clerk](https://docs.convex.dev/auth/clerk)
