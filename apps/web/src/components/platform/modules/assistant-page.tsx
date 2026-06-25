@@ -4,7 +4,7 @@ import { api } from "@FC237/backend/convex/_generated/api";
 import { Button } from "@FC237/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@FC237/ui/components/card";
 import { Input } from "@FC237/ui/components/input";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { Bot } from "lucide-react";
 import { useState } from "react";
 
@@ -23,23 +23,33 @@ const shortcuts = [
 export function AssistantPage() {
   const [sessionId, setSessionId] = useState<any>();
   const [content, setContent] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
   const sessions = useQuery(api.assistant.listSessions) ?? [];
   const messages = useQuery(api.assistant.listMessages, { sessionId }) ?? [];
   const dashboard = useQuery(api.dashboard.getOverview);
-  const sendMessage = useMutation(api.assistant.sendMessage);
+  const sendMessage = useAction(api.assistantActions.sendMessage);
 
   async function submit(message = content) {
     const prompt = message.trim();
     if (!prompt) return;
-    const result = await sendMessage({ content: prompt, sessionId });
-    setSessionId(result.sessionId);
-    setContent("");
+    setPending(true);
+    setError("");
+    try {
+      const result = await sendMessage({ content: prompt, sessionId });
+      setSessionId(result.sessionId);
+      setContent("");
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Assistant request failed.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
     <ModulePage
       title="Assistant"
-      description="Phase 1 keeps the assistant deterministic and app-aware. It reads platform state and responds in explicit modes: Ask, Assessment, Recommendation, Evidence, Incident, Report, and Policy."
+      description="The FC237 assistant now uses the OpenAI Responses API with workspace grounding and a Cameroon-aware governance prompt so advice stays practical, compliance-minded, and linked to your real platform state."
       icon={Bot}
       summary={
         <SummaryGrid
@@ -63,9 +73,9 @@ export function AssistantPage() {
               tone: "orange",
             },
             {
-              label: "Rule Base",
-              value: "Live",
-              detail: "Responses are generated from current records, not a free-form LLM dependency.",
+              label: "Runtime",
+              value: "OpenAI",
+              detail: "Responses are grounded in current FC237 records and a Cameroon-first governance prompt.",
               tone: "green",
             },
           ]}
@@ -101,11 +111,11 @@ export function AssistantPage() {
             {messages.length === 0 ? (
               <div className="grid gap-4 rounded-2xl bg-muted/30 p-4">
                 <p className="text-sm text-muted-foreground">
-                  Use the assistant when you want the next best action explained through current dashboard scores, open actions, risks, evidence, incidents, reports, or policy state.
+                  Use the assistant when you want the next best action explained through current dashboard scores, open actions, risks, evidence, incidents, reports, or policy state, with Cameroon-aware compliance framing.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {shortcuts.map((shortcut) => (
-                    <Button key={shortcut} onClick={() => submit(shortcut)} type="button" variant="outline">
+                    <Button disabled={pending} key={shortcut} onClick={() => submit(shortcut)} type="button" variant="outline">
                       {shortcut}
                     </Button>
                   ))}
@@ -124,6 +134,7 @@ export function AssistantPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <StatusBadge tone="purple">{message.structuredResponse.mode}</StatusBadge>
                           {message.structuredResponse.referencedScore ? <StatusBadge tone="green">{message.structuredResponse.referencedScore}</StatusBadge> : null}
+                          {message.structuredResponse.providerModel ? <StatusBadge tone="orange">{message.structuredResponse.providerModel}</StatusBadge> : null}
                         </div>
                         <div>
                           <b>Risk:</b> {message.structuredResponse.identifiedRisk}
@@ -138,7 +149,13 @@ export function AssistantPage() {
                           <b>Next step:</b> {message.structuredResponse.nextStep}
                         </div>
                         <div>
+                          <b>Cameroon context:</b> {message.structuredResponse.cameroonContext}
+                        </div>
+                        <div>
                           <b>Escalation:</b> {message.structuredResponse.escalationNotice}
+                        </div>
+                        <div>
+                          <b>Note:</b> {message.structuredResponse.disclaimer}
                         </div>
                       </div>
                     ) : null}
@@ -146,6 +163,7 @@ export function AssistantPage() {
                 ))}
               </div>
             )}
+            {error ? <div className="rounded-2xl border border-rose-300/70 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{error}</div> : null}
             <form
               className="grid grid-cols-[1fr_auto] gap-2"
               onSubmit={(event) => {
@@ -154,11 +172,14 @@ export function AssistantPage() {
               }}
             >
               <Input
+                disabled={pending}
                 placeholder="Ask about readiness, risk, evidence, incidents, reports, or policy work..."
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
               />
-              <Button type="submit">Send</Button>
+              <Button disabled={pending} type="submit">
+                {pending ? "Thinking..." : "Send"}
+              </Button>
             </form>
           </CardContent>
         </Card>

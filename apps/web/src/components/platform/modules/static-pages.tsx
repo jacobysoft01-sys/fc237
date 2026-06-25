@@ -436,7 +436,7 @@ export function ResourcesPage() {
             {
               label: "Assistant Mode",
               value: overview?.assistantInsight.mode ?? "Ask",
-              detail: overview?.assistantInsight.title ?? "The assistant stays deterministic and app-aware in Phase 1.",
+              detail: overview?.assistantInsight.title ?? "The assistant now uses OpenAI with workspace grounding and Cameroon-aware governance instructions.",
               tone: "orange",
             },
             {
@@ -886,7 +886,7 @@ export function AdminPage() {
   return (
     <ModulePage
       title="Administration"
-      description="Phase 1 admin keeps the system understandable: who owns the workspace, how deterministic guidance works, and which operational signals still need attention."
+      description="Phase 1 admin keeps the system understandable: who owns the workspace, how assistant grounding works, and which operational signals still need attention."
       icon={Users}
       form={null}
       summary={
@@ -911,9 +911,9 @@ export function AdminPage() {
               tone: "orange",
             },
             {
-              label: "Rule Base",
-              value: "Deterministic",
-              detail: "Assistant output and action generation are driven by stored records, not opaque free-form reasoning.",
+              label: "Assistant Runtime",
+              value: "OpenAI",
+              detail: "Assistant output is model-backed but still grounded in stored records, scoring, and action-plan state.",
               tone: "green",
             },
           ]}

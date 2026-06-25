@@ -79,7 +79,7 @@ export default function Home() {
             <CardContent className="grid gap-4 p-6">
               {[
                 ["Executive command center", "Compliance score, evidence coverage, open findings, and high-risk AI systems."],
-                ["Guided FC237 assistant", "Rule-based guidance with risk, action, evidence, next step, and escalation notices."],
+                ["Guided FC237 assistant", "OpenAI-backed guidance grounded in live FC237 records and Cameroon-aware governance instructions."],
                 ["Evidence Vault", "Link screenshots, access reviews, policies, incident logs, and reports to controls."],
                 ["Framework mapping", "Track FC237 progress against ISO 27001, NIST AI RMF, and EU AI Act."],
               ].map(([title, body]) => (
@@ -97,7 +97,7 @@ export default function Home() {
                   FC237 Assistant
                 </div>
                 <p className="mt-3 text-sm/6 opacity-90">
-                  Ask about MFA, vendor reviews, incident response, AI systems, evidence, and maturity improvement without reading the framework manually.
+                  Ask about MFA, vendor reviews, incident response, AI systems, evidence, and maturity improvement with advice tailored to Cameroonian compliance and governance realities.
                 </p>
               </div>
             </CardContent>
