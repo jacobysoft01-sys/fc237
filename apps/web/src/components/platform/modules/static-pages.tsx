@@ -9,10 +9,15 @@ import Link from "next/link";
 import { useState } from "react";
 
 import {
+  complianceJourneyStages,
   cloudUsageOptions,
   downloadTemplates,
   frameworkOptions,
+  guideGlossaryTerms,
+  guideTracks,
   ictSupportOptions,
+  type GuideTrackKey,
+  type JourneyStageKey,
   languagePreferenceOptions,
   platformSections,
   reminderCadenceOptions,
@@ -22,6 +27,7 @@ import {
 import {
   EmptyState,
   Field,
+  FilterButton,
   LinkedRecordStack,
   ModulePage,
   SectionCard,
@@ -44,6 +50,10 @@ function formatNumber(value: FormDataEntryValue | null, fallback?: number) {
   if (typeof value !== "string" || value.trim().length === 0) return fallback;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function hasTextValue(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function hasChecked(formData: FormData, key: string) {
@@ -100,6 +110,249 @@ function downloadTemplate(fileName: string, content: string, mimeType: string) {
   URL.revokeObjectURL(url);
 }
 
+function clampPercent(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function averagePercent(values: number[]) {
+  const safe = values.filter((value) => Number.isFinite(value));
+  if (safe.length === 0) return 0;
+  return clampPercent(safe.reduce((sum, value) => sum + value, 0) / safe.length);
+}
+
+function ratioPercent(numerator: number, denominator: number) {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator <= 0) return 0;
+  return clampPercent((numerator / denominator) * 100);
+}
+
+function domainScoreValue(overview: any, key: string) {
+  return overview?.domainScores.find((domain: any) => domain.key === key)?.score ?? 0;
+}
+
+function resolveRecommendedJourneyStageKey({
+  overview,
+  profileCompletion,
+  selectedFrameworks,
+  aiSystems,
+  vendors,
+  readinessAnswered,
+  totalQuestions,
+  missingEvidenceSlots,
+}: {
+  overview: any;
+  profileCompletion: number;
+  selectedFrameworks: string[];
+  aiSystems: any[];
+  vendors: any[];
+  readinessAnswered: number;
+  totalQuestions: number;
+  missingEvidenceSlots: number;
+}): JourneyStageKey {
+  if (!overview) return "setup";
+  if (profileCompletion < 70 || selectedFrameworks.length === 0) return "setup";
+  if (aiSystems.length === 0 || vendors.length === 0) return "inventory";
+  if (readinessAnswered < totalQuestions || overview.readiness.latestAssessmentScore === 0) return "baseline";
+  if (
+    domainScoreValue(overview, "risk_management") < 60 ||
+    domainScoreValue(overview, "ai_governance") < 60 ||
+    overview.riskRollup.withoutControls > 0 ||
+    overview.policyRollup.draftOrExpired > 0 ||
+    (overview.policyRollup.missingPriorityPolicies?.length ?? 0) > 0
+  ) {
+    return "governance";
+  }
+  if (
+    missingEvidenceSlots > 0 ||
+    overview.vendorRollup.weak > 0 ||
+    overview.vendorRollup.outstandingGaps > 0 ||
+    overview.incidentRollup.unresolved > 0
+  ) {
+    return "assurance";
+  }
+  return "reporting";
+}
+
+function buildJourneyStageCards({
+  overview,
+  actionPlan,
+  profileCompletion,
+  selectedFrameworks,
+  controls,
+  evidence,
+  vendors,
+  policies,
+  aiSystems,
+  incidents,
+}: {
+  overview: any;
+  actionPlan: any;
+  profileCompletion: number;
+  selectedFrameworks: string[];
+  controls: any[];
+  evidence: any[];
+  vendors: any[];
+  policies: any[];
+  aiSystems: any[];
+  incidents: any[];
+}) {
+  const readinessQuestions = overview?.readiness.questions ?? [];
+  const readinessAnswered = readinessQuestions.filter((question: any) => question.score > 0).length;
+  const requiredEvidenceSlots = overview?.evidenceRollup.requiredSlots ?? 0;
+  const acceptedEvidenceSlots = overview?.evidenceRollup.acceptedSlots ?? 0;
+  const missingEvidenceSlots = Math.max(requiredEvidenceSlots - acceptedEvidenceSlots, 0);
+  const criticalActions = actionPlan?.summary.critical ?? 0;
+  const aiOwnerCoverage = ratioPercent(
+    aiSystems.filter(
+      (system: any) =>
+        hasTextValue(system.businessOwner ?? system.owner) &&
+        hasTextValue(system.technicalOwner) &&
+        hasTextValue(system.department),
+    ).length,
+    aiSystems.length,
+  );
+  const vendorCoverage = ratioPercent(
+    vendors.filter((vendor: any) => (vendor.evidenceSection?.outstandingGaps?.length ?? 0) === 0).length,
+    vendors.length,
+  );
+  const maturityCoverage = averagePercent(
+    (overview?.maturitySupport?.domains ?? []).map((domain: any) => domain.score * 20),
+  );
+  const recommendedKey = resolveRecommendedJourneyStageKey({
+    overview,
+    profileCompletion,
+    selectedFrameworks,
+    aiSystems,
+    vendors,
+    readinessAnswered,
+    totalQuestions: readinessQuestions.length,
+    missingEvidenceSlots,
+  });
+
+  const rawCards = complianceJourneyStages.map((stage) => {
+    switch (stage.key) {
+      case "setup":
+        return {
+          ...stage,
+          progress: profileCompletion,
+          metric: `${profileCompletion}% profile completion`,
+          liveSignal: `${selectedFrameworks.length} frameworks selected and the organization brief is ${profileCompletion}% complete.`,
+          blockers: [
+            !hasTextValue(overview.organization.riskOwner) ? "Assign a risk owner so action plans and reports have clear accountability." : null,
+            !hasTextValue(overview.organization.cyberFocalPoint) ? "Add a cyber focal point to anchor operational follow-up." : null,
+            selectedFrameworks.length === 0 ? "Choose at least one framework to shape reporting language and policy expectations." : null,
+            !hasTextValue(overview.organization.contacts?.primaryEmail) ? "Set a primary contact so notifications and digests have a real destination." : null,
+          ].filter(Boolean) as string[],
+        };
+      case "inventory":
+        return {
+          ...stage,
+          progress: averagePercent([aiSystems.length > 0 ? 100 : 0, vendors.length > 0 ? 100 : 0, aiOwnerCoverage, vendorCoverage]),
+          metric: `${aiSystems.length + vendors.length} mapped systems and vendors`,
+          liveSignal: `${aiSystems.length} AI systems are tracked, ${overview.aiRollup.pendingApproval} still need approval, and ${overview.vendorRollup.outstandingGaps} vendor document gaps remain.`,
+          blockers: [
+            aiSystems.length === 0 ? "Register the AI systems or automations that create real business exposure." : null,
+            vendors.length === 0 ? "Capture the vendors and cloud suppliers your operations depend on." : null,
+            overview.aiRollup.pendingApproval > 0 ? `${overview.aiRollup.pendingApproval} AI systems are still pending approval coverage.` : null,
+            overview.vendorRollup.outstandingGaps > 0 ? `${overview.vendorRollup.outstandingGaps} vendor reviews still have unresolved documentation gaps.` : null,
+          ].filter(Boolean) as string[],
+        };
+      case "baseline":
+        return {
+          ...stage,
+          progress: averagePercent([overview.readiness.latestAssessmentScore, ratioPercent(readinessAnswered, readinessQuestions.length), maturityCoverage]),
+          metric: `${overview.readiness.latestAssessmentScore}% readiness baseline`,
+          liveSignal: `${readinessAnswered}/${readinessQuestions.length} readiness questions are answered and the maturity support view sits at ${overview.maturitySupport.label}.`,
+          blockers: [
+            readinessAnswered < readinessQuestions.length ? `${readinessQuestions.length - readinessAnswered} readiness questions still need answers.` : null,
+            overview.readiness.latestAssessmentScore === 0 ? "Run the readiness assessment once so the dashboard can generate a real baseline." : null,
+            (actionPlan?.summary.active ?? 0) === 0 ? "Action generation has little to work with until assessment signals are stored." : null,
+          ].filter(Boolean) as string[],
+        };
+      case "governance":
+        return {
+          ...stage,
+          progress: averagePercent([
+            domainScoreValue(overview, "ai_governance"),
+            domainScoreValue(overview, "risk_management"),
+            domainScoreValue(overview, "policy_maturity"),
+          ]),
+          metric: `${controls.length} controls and ${policies.length} policies in play`,
+          liveSignal: `${overview.riskRollup.highOrCritical} elevated risks exist, ${overview.riskRollup.withoutControls} still lack control links, and ${overview.policyRollup.draftOrExpired} policies are draft or expired.`,
+          blockers: [
+            overview.riskRollup.highOrCritical > 0 ? `${overview.riskRollup.highOrCritical} risks are still high or critical.` : null,
+            overview.riskRollup.withoutControls > 0 ? `${overview.riskRollup.withoutControls} risks still need linked controls.` : null,
+            overview.aiRollup.pendingApproval > 0 ? `${overview.aiRollup.pendingApproval} AI systems still need approval coverage.` : null,
+            overview.policyRollup.draftOrExpired > 0 ? `${overview.policyRollup.draftOrExpired} policies need review or approval attention.` : null,
+            (overview.policyRollup.missingPriorityPolicies?.length ?? 0) > 0
+              ? `${overview.policyRollup.missingPriorityPolicies.length} priority policy types are still missing.`
+              : null,
+          ].filter(Boolean) as string[],
+        };
+      case "assurance":
+        return {
+          ...stage,
+          progress: averagePercent([
+            domainScoreValue(overview, "evidence_coverage"),
+            domainScoreValue(overview, "vendor_readiness"),
+            domainScoreValue(overview, "incident_readiness"),
+          ]),
+          metric: `${acceptedEvidenceSlots}/${requiredEvidenceSlots || 0} evidence slots accepted`,
+          liveSignal: `${evidence.length} evidence items, ${vendors.length} vendor reviews, and ${incidents.length} incidents are feeding the proof layer right now.`,
+          blockers: [
+            missingEvidenceSlots > 0 ? `${missingEvidenceSlots} required evidence slots still do not have accepted proof.` : null,
+            overview.vendorRollup.weak > 0 ? `${overview.vendorRollup.weak} vendor evaluations are currently weak.` : null,
+            overview.vendorRollup.outstandingGaps > 0 ? `${overview.vendorRollup.outstandingGaps} vendor documentation gaps are still open.` : null,
+            overview.incidentRollup.unresolved > 0 ? `${overview.incidentRollup.unresolved} incidents are still unresolved.` : null,
+          ].filter(Boolean) as string[],
+        };
+      case "reporting":
+        return {
+          ...stage,
+          progress: averagePercent([
+            overview.score.overall,
+            criticalActions === 0 ? 100 : clampPercent(100 - criticalActions * 25),
+            overview.topRisks.length === 0 ? 100 : clampPercent(100 - overview.topRisks.length * 12),
+            overview.reports.length > 0 ? 100 : 0,
+          ]),
+          metric: `${overview.score.overall}% overall FC237 score`,
+          liveSignal: `${overview.score.status} posture with ${actionPlan?.summary.active ?? 0} active actions, ${criticalActions} critical actions, and ${overview.reports.length} stored reports.`,
+          blockers: [
+            overview.score.overall < 60 ? "The overall score is still weak enough that any external story should stay cautious and honest." : null,
+            criticalActions > 0 ? `${criticalActions} critical actions still need closure before the posture is stable.` : null,
+            overview.reports.length === 0 ? "No stored readiness report exists yet for audit or leadership history." : null,
+          ].filter(Boolean) as string[],
+        };
+      default:
+        return {
+          ...stage,
+          progress: 0,
+          metric: "0%",
+          liveSignal: "No live signal yet.",
+          blockers: [],
+        };
+    }
+  });
+
+  const recommendedIndex = rawCards.findIndex((stage) => stage.key === recommendedKey);
+  const stageCards = rawCards.map((stage, index) => {
+    const status =
+      stage.key === recommendedKey ? "Current focus" : index < recommendedIndex ? "Established" : index === recommendedIndex + 1 ? "Up next" : "Future";
+    const tone = stage.key === recommendedKey ? (stage.progress >= 70 ? "green" : "orange") : index < recommendedIndex ? "green" : "neutral";
+    return {
+      ...stage,
+      status,
+      tone,
+      recommended: stage.key === recommendedKey,
+    };
+  });
+
+  return {
+    recommendedKey,
+    stageCards,
+  };
+}
+
 export function FrameworkPage() {
   const dashboard = useQuery(api.dashboard.getOverview);
   const actionPlan = useQuery(api.tasks.getActionPlan, {});
@@ -119,6 +372,8 @@ export function FrameworkPage() {
   const readinessAnswered = overview?.readiness.questions.filter((question: any) => question.score > 0).length ?? 0;
   const activeActions = actionPlan?.summary.active ?? overview?.nextActions.length ?? 0;
   const commandProgress = overview?.score.overall ?? 0;
+  const [selectedTrackKey, setSelectedTrackKey] = useState<GuideTrackKey>("founder");
+  const [selectedStageKey, setSelectedStageKey] = useState<JourneyStageKey | null>(null);
 
   const pillarCards = overview
     ? platformSections.map((section) => {
@@ -194,7 +449,7 @@ export function FrameworkPage() {
               detail: `${resourcePlaybooks.length} guided playbooks and ${downloadTemplates.length} reusable starter packs are ready for the team.`,
               highlights: [
                 `${overview.reportPreviews.length} report preview families are already wired to live data.`,
-                `${overview.policyRollup.missingPriorityPolicies} priority policy types still need coverage.`,
+                `${overview.policyRollup.missingPriorityPolicies.length} priority policy types still need coverage.`,
               ],
             };
           case "administration":
@@ -215,39 +470,65 @@ export function FrameworkPage() {
         }
       }).filter(Boolean)
     : [];
+  const { recommendedKey, stageCards } = overview
+    ? buildJourneyStageCards({
+        overview,
+        actionPlan,
+        profileCompletion,
+        selectedFrameworks,
+        controls,
+        evidence,
+        vendors,
+        policies,
+        aiSystems,
+        incidents,
+      })
+    : { recommendedKey: "setup" as JourneyStageKey, stageCards: [] };
+  const currentStage = stageCards.find((stage) => stage.key === (selectedStageKey ?? recommendedKey)) ?? stageCards[0];
+  const currentTrack = guideTracks.find((track) => track.key === selectedTrackKey) ?? guideTracks[0];
+  const focusedPlaybooks = currentStage
+    ? resourcePlaybooks.filter(
+        (playbook) => playbook.stageKeys.includes(currentStage.key) && playbook.trackKeys.includes(currentTrack.key),
+      )
+    : [];
+  const focusedAction = overview?.nextActions[0];
 
   return (
     <ModulePage
       title="Framework Guide"
-      description="This page turns the FC237 guide into an orientation layer for the web app, so each section explains what it owns, which records it relies on, and what success looks like."
+      description="This is the live zero-to-hero journey for FC237. It explains what each phase means, why it matters, and which route moves the organization toward defensible compliance next."
       icon={Shield}
       form={null}
       summary={
         <SummaryGrid
           items={[
             {
-              label: "Selected Frameworks",
-              value: `${selectedFrameworks.length}`,
-              detail: selectedFrameworks.length > 0 ? selectedFrameworks.join(", ") : "Choose frameworks in settings to align guidance and report language.",
-              tone: selectedFrameworks.length > 0 ? "green" : "orange",
+              label: "Current Stage",
+              value: currentStage ? `${currentStage.step}` : "01",
+              detail: currentStage
+                ? `${currentStage.title}. ${currentStage.liveSignal}`
+                : "Complete onboarding so the journey can pick the right phase for the organization.",
+              tone: (currentStage?.tone ?? "orange") as "green" | "orange" | "red" | "neutral" | "purple" | "yellow",
             },
             {
-              label: "Guide Sections",
-              value: `${platformSections.length}`,
-              detail: "Command Center, Assessments, Governance, Assurance, Knowledge Base, and Administration.",
+              label: "Current Track",
+              value: currentTrack.label,
+              detail: currentTrack.focus,
               tone: "purple",
             },
             {
-              label: "Active Actions",
-              value: `${activeActions}`,
-              detail: "The framework is now tied directly to the action queue instead of static documentation alone.",
-              tone: activeActions > 0 ? "orange" : "green",
+              label: "Overall Score",
+              value: `${overview?.score.overall ?? 0}%`,
+              detail: overview?.assistantInsight.summary ?? "The journey starts showing live scores after onboarding and the first readiness run.",
+              tone: scoreTone(overview?.score.status ?? "neutral"),
             },
             {
-              label: "Current Status",
-              value: overview?.score.status ?? "Waiting",
-              detail: overview?.assistantInsight.summary ?? "Complete onboarding to populate the guide with real command-center signals.",
-              tone: scoreTone(overview?.score.status ?? "neutral"),
+              label: "Action Queue",
+              value: `${activeActions}`,
+              detail: focusedAction
+                ? `Top live action: ${focusedAction.title}.`
+                : "As weak domains appear, the journey will surface the next best action here.",
+              tone: activeActions > 0 ? "orange" : "green",
             },
           ]}
         />
@@ -267,6 +548,169 @@ export function FrameworkPage() {
         </SectionCard>
       ) : (
         <>
+          <SectionCard title="Zero-to-Hero Journey" description="Choose a role lens, inspect the current stage, and let the app explain exactly what must happen next.">
+            <div className="flex flex-wrap items-center gap-2">
+              {guideTracks.map((track) => (
+                <FilterButton active={track.key === selectedTrackKey} key={track.key} onClick={() => setSelectedTrackKey(track.key)}>
+                  {track.label}
+                </FilterButton>
+              ))}
+            </div>
+
+            <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+              {stageCards.map((stage) => (
+                <button
+                  className={`rounded-[1.5rem] border p-4 text-left transition ${
+                    stage.key === (currentStage?.key ?? recommendedKey)
+                      ? "border-primary/45 bg-primary/8 shadow-sm"
+                      : "border-border/70 bg-background hover:border-primary/25 hover:bg-muted/20"
+                  }`}
+                  key={stage.key}
+                  onClick={() => setSelectedStageKey(stage.key)}
+                  type="button"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Step {stage.step}</div>
+                      <div className="mt-2 text-base font-semibold">{stage.title}</div>
+                    </div>
+                    <StatusBadge tone={stage.tone as "green" | "orange" | "red" | "neutral" | "purple" | "yellow"}>{stage.status}</StatusBadge>
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">{stage.beginnerSummary}</p>
+                  <div className="mt-4 grid gap-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Journey progress</span>
+                      <span>{stage.progress}%</span>
+                    </div>
+                    <ProgressLine value={stage.progress} tone={stage.progress >= 70 ? "green" : stage.progress >= 45 ? "orange" : "red"} />
+                  </div>
+                  <div className="mt-4 rounded-xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">{stage.liveSignal}</div>
+                </button>
+              ))}
+            </div>
+
+            {currentStage ? (
+              <div className="mt-6 grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <Card className="rounded-[1.75rem] border border-border/70 shadow-none">
+                  <CardHeader className="gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          Stage {currentStage.step}
+                        </div>
+                        <CardTitle className="mt-2 text-2xl">{currentStage.title}</CardTitle>
+                        <CardDescription className="mt-2">{currentStage.description}</CardDescription>
+                      </div>
+                      <StatusBadge tone={currentStage.tone as "green" | "orange" | "red" | "neutral" | "purple" | "yellow"}>{currentStage.metric}</StatusBadge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="grid gap-6">
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      <div className="rounded-2xl border border-border/70 bg-background p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">From zero</div>
+                        <p className="mt-2 text-sm text-muted-foreground">{currentStage.beginnerSummary}</p>
+                      </div>
+                      <div className="rounded-2xl border border-border/70 bg-background p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Why it matters</div>
+                        <p className="mt-2 text-sm text-muted-foreground">{currentStage.whyItMatters}</p>
+                      </div>
+                      <div className="rounded-2xl border border-border/70 bg-background p-4">
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Hero outcome</div>
+                        <p className="mt-2 text-sm text-muted-foreground">{currentStage.heroOutcome}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <div className="text-sm font-semibold">What to do now</div>
+                        <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                          {currentStage.checklist.map((item) => (
+                            <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">What to watch for</div>
+                        <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                          {(currentStage.blockers.length > 0 ? currentStage.blockers : currentStage.watchFor).map((item) => (
+                            <div className="rounded-xl border border-dashed border-border px-3 py-2" key={item}>
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {currentStage.routes.map((route) => (
+                        <Link
+                          className="rounded-2xl border border-border/70 bg-background p-4 transition hover:border-primary/35 hover:bg-muted/20"
+                          href={route.href}
+                          key={`${currentStage.key}-${route.href}`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="text-sm font-semibold">{route.label}</div>
+                            <ArrowUpRight className="size-4 text-muted-foreground" />
+                          </div>
+                          <div className="mt-2 text-sm text-muted-foreground">{route.purpose}</div>
+                        </Link>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-[1.75rem] border border-border/70 shadow-none">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{currentTrack.label} guide</CardTitle>
+                    <CardDescription>{currentTrack.audience}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4">
+                    <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Track focus</div>
+                      <p className="mt-2 text-sm text-muted-foreground">{currentTrack.focus}</p>
+                    </div>
+                    <div className="rounded-2xl border border-border/70 bg-background p-4">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">What hero looks like</div>
+                      <p className="mt-2 text-sm text-muted-foreground">{currentTrack.heroDefinition}</p>
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">Starter prompts</div>
+                      <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                        {currentTrack.starterPrompts.map((prompt) => (
+                          <div className="rounded-xl border border-border/60 bg-background px-3 py-2" key={prompt}>
+                            {prompt}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {focusedPlaybooks.length > 0 ? (
+                      <div>
+                        <div className="text-sm font-semibold">Best playbooks for this stage</div>
+                        <div className="mt-3 grid gap-2">
+                          {focusedPlaybooks.slice(0, 2).map((playbook) => (
+                            <Link
+                              className="rounded-xl border border-border/70 bg-background px-3 py-3 text-sm transition hover:border-primary/35 hover:bg-muted/20"
+                              href={playbook.href}
+                              key={playbook.key}
+                            >
+                              <div className="font-medium">{playbook.title}</div>
+                              <div className="mt-1 text-muted-foreground">{playbook.outcome}</div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <Link href={currentTrack.primaryRoute}>
+                      <Button className="w-full">Open primary workspace</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+          </SectionCard>
+
           <SectionCard title="Operating Model Map" description="Each section below is grounded in live FC237 records, not placeholder guide text.">
             <div className="grid gap-4 xl:grid-cols-2">
               {pillarCards.map((card: any) => (
@@ -342,25 +786,34 @@ export function FrameworkPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Guide-Driven Next Steps" description="These links make the guide actionable when someone needs a clear path out of a weak score or empty state.">
+          <SectionCard title="Guide-Driven Next Steps" description="These moves combine the current stage, the live action queue, and report readiness into one clear teaching path.">
             <LinkedRecordStack
               items={[
                 {
-                  title: "Review the dashboard with the guide context in mind",
-                  detail: `${overview.score.overall}% overall score, ${overview.riskRollup.highOrCritical} urgent risks, and ${activeActions} active actions are already visible.`,
-                  href: "/dashboard",
+                  title: currentStage ? `Advance the ${currentStage.title.toLowerCase()} stage` : "Advance the current stage",
+                  detail: currentStage
+                    ? `${currentStage.liveSignal} Open ${currentStage.routes[0]?.label ?? "the suggested route"} to keep moving.`
+                    : "Use the guide to choose the next route.",
+                  href: currentStage?.routes[0]?.href ?? "/dashboard",
                 },
                 {
-                  title: "Open the action queue for execution",
-                  detail: actionPlan?.summary.critical
-                    ? `${actionPlan.summary.critical} critical items need action before the next reporting cycle.`
+                  title: focusedAction ? focusedAction.title : "Open the action queue for execution",
+                  detail: focusedAction
+                    ? `${focusedAction.priority} priority. Due ${focusedAction.dueDate}. This is the sharpest live signal from the workspace right now.`
                     : "The action queue is the best place to convert weak readiness or evidence gaps into work.",
                   href: "/action-plan",
                 },
                 {
-                  title: "Use reports when the workspace data looks clean",
-                  detail: overview.reportPreviews[0]?.summary ?? "Store the compliance summary after validating scores, risks, and evidence coverage.",
+                  title: "Use reports when the posture story is coherent",
+                  detail:
+                    overview.reportPreviews[0]?.summary ??
+                    "Store the compliance summary after validating scores, risks, and evidence coverage.",
                   href: "/reports",
+                },
+                {
+                  title: `Ask the assistant through the ${overview.assistantInsight.mode} mode`,
+                  detail: `${overview.assistantInsight.title}. ${currentTrack.starterPrompts[0]}`,
+                  href: "/assistant",
                 },
               ]}
             />
@@ -374,12 +827,46 @@ export function FrameworkPage() {
 export function ResourcesPage() {
   const dashboard = useQuery(api.dashboard.getOverview);
   const actionPlan = useQuery(api.tasks.getActionPlan, {});
+  const controls = useQuery(api.controls.list) ?? [];
+  const evidence = useQuery(api.evidence.list) ?? [];
+  const vendors = useQuery(api.vendors.list) ?? [];
+  const policies = useQuery(api.policies.list) ?? [];
+  const aiSystems = useQuery(api.aiSystems.list) ?? [];
+  const incidents = useQuery(api.incidents.list) ?? [];
+  const [trackFilter, setTrackFilter] = useState<GuideTrackKey | "all">("all");
+  const [stageFilter, setStageFilter] = useState<JourneyStageKey | "all">("all");
 
   const overview = dashboard && !dashboard.needsOnboarding ? dashboard : null;
-  const recommendations: Array<{ title: string; detail: string; href: "/readiness" | "/evidence" | "/vendors" | "/policies" | "/assistant" | "/reports" }> = [];
+  const profileCompletion = organizationProfileCompletion(overview?.organization);
+  const selectedFrameworks = overview?.organization.selectedFrameworks ?? [];
+  const { recommendedKey, stageCards } = overview
+    ? buildJourneyStageCards({
+        overview,
+        actionPlan,
+        profileCompletion,
+        selectedFrameworks,
+        controls,
+        evidence,
+        vendors,
+        policies,
+        aiSystems,
+        incidents,
+      })
+    : { recommendedKey: "setup" as JourneyStageKey, stageCards: [] };
+  const recommendedStage = stageCards.find((stage) => stage.key === recommendedKey) ?? stageCards[0];
+  const activeTrack = trackFilter === "all" ? null : guideTracks.find((track) => track.key === trackFilter) ?? null;
+  const recommendations: Array<{ title: string; detail: string; href: any }> = [];
 
   if (overview) {
-    if (overview.readiness.latestAssessmentScore === 0) {
+    if (recommendedStage) {
+      recommendations.push({
+        title: `Work the ${recommendedStage.title.toLowerCase()} stage next`,
+        detail: recommendedStage.liveSignal,
+        href: recommendedStage.routes[0]?.href ?? "/dashboard",
+      });
+    }
+
+    if (overview.readiness.latestAssessmentScore === 0 || recommendedKey === "baseline") {
       recommendations.push({
         title: "Start with the readiness assessment",
         detail: "No stored readiness score exists yet, so the question bank is still the fastest way to unlock domain scoring and action generation.",
@@ -403,28 +890,61 @@ export function ResourcesPage() {
       });
     }
 
-    if (overview.policyRollup.draftOrExpired > 0 || overview.policyRollup.missingPriorityPolicies > 0) {
+    if (overview.policyRollup.draftOrExpired > 0 || overview.policyRollup.missingPriorityPolicies.length > 0) {
       recommendations.push({
         title: "Advance policy work",
-        detail: `${overview.policyRollup.draftOrExpired} policies are draft or expired and ${overview.policyRollup.missingPriorityPolicies} priority policy types are still missing.`,
+        detail: `${overview.policyRollup.draftOrExpired} policies are draft or expired and ${overview.policyRollup.missingPriorityPolicies.length} priority policy types are still missing.`,
         href: "/policies",
+      });
+    }
+
+    if (activeTrack) {
+      recommendations.push({
+        title: `${activeTrack.label} lens`,
+        detail: activeTrack.starterPrompts[0],
+        href: activeTrack.primaryRoute,
       });
     }
   }
 
+  const filteredPlaybooks = resourcePlaybooks
+    .filter(
+      (playbook) =>
+        (trackFilter === "all" || playbook.trackKeys.includes(trackFilter)) &&
+        (stageFilter === "all" || playbook.stageKeys.includes(stageFilter)),
+    )
+    .sort((left, right) => {
+      const leftScore =
+        Number(left.stageKeys.includes(recommendedKey)) +
+        Number(trackFilter !== "all" && left.trackKeys.includes(trackFilter));
+      const rightScore =
+        Number(right.stageKeys.includes(recommendedKey)) +
+        Number(trackFilter !== "all" && right.trackKeys.includes(trackFilter));
+      return rightScore - leftScore;
+    });
+  const visiblePlaybooks = filteredPlaybooks.length > 0 ? filteredPlaybooks : resourcePlaybooks;
+
   return (
     <ModulePage
       title="Resources"
-      description="This library supports the guided workflow with playbooks, reusable starter packs, and context-aware prompts that point people back into the live workspace."
+      description="This library teaches the FC237 workflow in plain language, then routes people into the exact module that moves the organization forward."
       icon={Library}
       form={null}
       summary={
         <SummaryGrid
           items={[
             {
-              label: "Guided Playbooks",
-              value: `${resourcePlaybooks.length}`,
-              detail: "Each playbook points into an existing route instead of creating a parallel documentation maze.",
+              label: "Recommended Stage",
+              value: recommendedStage ? `${recommendedStage.step}` : "01",
+              detail: recommendedStage
+                ? `${recommendedStage.title}. ${recommendedStage.beginnerSummary}`
+                : "Complete onboarding so the resource library can recommend a stage automatically.",
+              tone: (recommendedStage?.tone ?? "orange") as "green" | "orange" | "red" | "neutral" | "purple" | "yellow",
+            },
+            {
+              label: "Visible Playbooks",
+              value: `${visiblePlaybooks.length}`,
+              detail: "Filter by stage or role to turn the library into an interactive learning track.",
               tone: "purple",
             },
             {
@@ -434,13 +954,7 @@ export function ResourcesPage() {
               tone: "green",
             },
             {
-              label: "Assistant Mode",
-              value: overview?.assistantInsight.mode ?? "Ask",
-              detail: overview?.assistantInsight.title ?? "The assistant now uses OpenAI with workspace grounding and Cameroon-aware governance instructions.",
-              tone: "orange",
-            },
-            {
-              label: "Active Queue",
+              label: "Action Queue",
               value: `${actionPlan?.summary.active ?? 0}`,
               detail: overview?.assistantInsight.summary ?? "Use the action plan and the dashboard together when picking the next move.",
               tone: (actionPlan?.summary.active ?? 0) > 0 ? "orange" : "green",
@@ -449,35 +963,156 @@ export function ResourcesPage() {
         />
       }
     >
-      <SectionCard title="Command Center Playbooks" description="Use these when the team needs a practical sequence instead of a blank module page.">
-        <div className="grid gap-4 xl:grid-cols-2">
-          {resourcePlaybooks.map((playbook) => (
-            <Card className="rounded-2xl border border-border/70 shadow-none" key={playbook.key}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{playbook.category}</div>
-                    <CardTitle className="mt-2 text-lg">{playbook.title}</CardTitle>
-                    <CardDescription className="mt-2">{playbook.description}</CardDescription>
-                  </div>
-                  <StatusBadge tone="purple">Guide</StatusBadge>
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-4">
-                <div className="grid gap-2 text-sm text-muted-foreground">
-                  {playbook.bulletPoints.map((point) => (
-                    <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2" key={point}>
-                      {point}
+      <SectionCard title="Start From Zero" description="If someone is new to compliance, this is the shortest path from confusion to useful momentum.">
+        {recommendedStage ? (
+          <div className="grid gap-4 xl:grid-cols-3">
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Where the app would start you</div>
+              <div className="mt-3 text-xl font-semibold">{recommendedStage.title}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{recommendedStage.beginnerSummary}</p>
+            </div>
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Why the app chose this</div>
+              <p className="mt-3 text-sm text-muted-foreground">{recommendedStage.liveSignal}</p>
+              <div className="mt-4 rounded-xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">
+                {recommendedStage.blockers[0] ?? "The core blockers for this stage are already under control."}
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Best first moves</div>
+              <div className="mt-3 grid gap-3">
+                {recommendedStage.routes.slice(0, 2).map((route) => (
+                  <Link
+                    className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-3 text-sm transition hover:border-primary/35 hover:bg-primary/5"
+                    href={route.href}
+                    key={`${recommendedStage.key}-${route.href}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium">{route.label}</span>
+                      <ArrowUpRight className="size-4 text-muted-foreground" />
                     </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={playbook.href}>
-                    <Button>{playbook.ctaLabel}</Button>
+                    <div className="mt-1 text-muted-foreground">{route.purpose}</div>
                   </Link>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <EmptyState
+            title="Resources become smarter after onboarding"
+            message="Once the workspace has an organization and seeded records, this page will point people to the exact guide stage that matters most."
+          />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Command Center Playbooks" description="Filter by role and stage when you want the guide to feel like an interactive training path instead of a static resource library.">
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterButton active={trackFilter === "all"} onClick={() => setTrackFilter("all")}>
+              All roles
+            </FilterButton>
+            {guideTracks.map((track) => (
+              <FilterButton active={trackFilter === track.key} key={track.key} onClick={() => setTrackFilter(track.key)}>
+                {track.label}
+              </FilterButton>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterButton active={stageFilter === "all"} onClick={() => setStageFilter("all")}>
+              All stages
+            </FilterButton>
+            {complianceJourneyStages.map((stage) => (
+              <FilterButton active={stageFilter === stage.key} key={stage.key} onClick={() => setStageFilter(stage.key)}>
+                {stage.step}. {stage.title}
+              </FilterButton>
+            ))}
+          </div>
+
+          {filteredPlaybooks.length === 0 ? (
+            <EmptyState
+              title="No exact playbook match"
+              message="Those filters are more specific than the current playbook set, so the library is showing the full catalog below instead."
+            />
+          ) : null}
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            {visiblePlaybooks.map((playbook) => (
+              <Card className="rounded-2xl border border-border/70 shadow-none" key={playbook.key}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{playbook.category}</div>
+                      <CardTitle className="mt-2 text-lg">{playbook.title}</CardTitle>
+                      <CardDescription className="mt-2">{playbook.description}</CardDescription>
+                    </div>
+                    <StatusBadge tone={playbook.stageKeys.includes(recommendedKey) ? "green" : "purple"}>
+                      {playbook.stageKeys.includes(recommendedKey) ? "Recommended" : "Guide"}
+                    </StatusBadge>
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  <div className="flex flex-wrap gap-2">
+                    {playbook.stageKeys.map((stageKey) => {
+                      const stage = complianceJourneyStages.find((item) => item.key === stageKey);
+                      return (
+                        <span
+                          className="rounded-full border border-border/70 bg-muted/20 px-3 py-1 text-[11px] font-medium text-muted-foreground"
+                          key={`${playbook.key}-${stageKey}`}
+                        >
+                          {stage?.step}. {stage?.title}
+                        </span>
+                      );
+                    })}
+                    {playbook.trackKeys.map((trackKey) => {
+                      const track = guideTracks.find((item) => item.key === trackKey);
+                      return (
+                        <span
+                          className="rounded-full border border-border/70 bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground"
+                          key={`${playbook.key}-${trackKey}`}
+                        >
+                          {track?.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Outcome</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{playbook.outcome}</p>
+                  </div>
+                  <div className="grid gap-2 text-sm text-muted-foreground">
+                    {playbook.bulletPoints.map((point) => (
+                      <div className="rounded-xl border border-border/60 bg-background px-3 py-2" key={point}>
+                        {point}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={playbook.href}>
+                      <Button>{playbook.ctaLabel}</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Compliance Explained In Plain Language" description="These are the core words the app uses, written for someone who is starting from zero rather than from audit jargon.">
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {guideGlossaryTerms.map((term) => (
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5" key={term.key}>
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{term.label}</div>
+              <p className="mt-3 text-sm text-muted-foreground">{term.meaning}</p>
+              <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+                <div className="font-medium text-foreground">Why it matters</div>
+                <div className="mt-1">{term.whyItMatters}</div>
+              </div>
+              <div className="mt-4 rounded-xl border border-dashed border-border px-3 py-3 text-sm text-muted-foreground">{term.beginnerTip}</div>
+              <Link className="mt-4 inline-flex text-sm font-medium text-primary hover:underline" href={term.route}>
+                Open {term.label.toLowerCase()}
+              </Link>
+            </div>
           ))}
         </div>
       </SectionCard>
@@ -502,7 +1137,7 @@ export function ResourcesPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="What the data says to do next" description="These recommendations are generated from the same live workspace state used by the dashboard and assistant.">
+      <SectionCard title="What the data says to do next" description="These recommendations are generated from the same live workspace state used by the dashboard, journey guide, and assistant.">
         {overview ? (
           <LinkedRecordStack
             items={[
@@ -520,7 +1155,10 @@ export function ResourcesPage() {
             ]}
           />
         ) : (
-          <EmptyState title="Resources become smarter after onboarding" message="Once the workspace has an organization and seeded records, this page will start pointing to the specific playbooks and starter packs that match the current gaps." />
+          <EmptyState
+            title="Resources become smarter after onboarding"
+            message="Once the workspace has an organization and seeded records, this page will start pointing to the specific playbooks and starter packs that match the current gaps."
+          />
         )}
       </SectionCard>
     </ModulePage>
