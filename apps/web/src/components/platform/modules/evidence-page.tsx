@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Archive } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { toOptionalId } from "@/components/platform/modules/id-helpers";
 import {
   EmptyState,
   Field,
@@ -58,7 +59,7 @@ export function EvidencePage() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    let fileStorageId: string | undefined;
+    let fileStorageId = toOptionalId<"_storage">("");
     if (file) {
       const uploadUrl = await generateUploadUrl({});
       const result = await fetch(uploadUrl, {
@@ -67,18 +68,18 @@ export function EvidencePage() {
         body: file,
       });
       const json = await result.json();
-      fileStorageId = json.storageId;
+      fileStorageId = toOptionalId<"_storage">(String(json.storageId ?? ""));
     }
 
     await create({
       title: form.title,
       evidenceType: form.evidenceType,
-      controlId: form.controlId || undefined,
-      relatedRiskId: form.relatedRiskId || undefined,
-      relatedVendorEvaluationId: form.relatedVendorEvaluationId || undefined,
-      relatedPolicyId: form.relatedPolicyId || undefined,
-      relatedIncidentId: form.relatedIncidentId || undefined,
-      relatedAiSystemId: form.relatedAiSystemId || undefined,
+      controlId: toOptionalId<"controls">(form.controlId),
+      relatedRiskId: toOptionalId<"risks">(form.relatedRiskId),
+      relatedVendorEvaluationId: toOptionalId<"vendorEvaluations">(form.relatedVendorEvaluationId),
+      relatedPolicyId: toOptionalId<"policies">(form.relatedPolicyId),
+      relatedIncidentId: toOptionalId<"incidents">(form.relatedIncidentId),
+      relatedAiSystemId: toOptionalId<"aiSystems">(form.relatedAiSystemId),
       fileStorageId,
       fileName: file?.name,
       status: form.status,

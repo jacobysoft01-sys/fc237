@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { MessageSquareWarning } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { toIdArray, toOptionalId } from "@/components/platform/modules/id-helpers";
 import {
   EmptyState,
   Field,
@@ -88,8 +89,8 @@ export function IncidentsPage() {
             event.preventDefault();
             await create({
               ...form,
-              relatedPolicyId: form.relatedPolicyId || undefined,
-              relatedControlIds: form.relatedControlIds.length ? (form.relatedControlIds as any) : undefined,
+              relatedPolicyId: toOptionalId<"policies">(form.relatedPolicyId),
+              relatedControlIds: toIdArray<"controls">(form.relatedControlIds),
             });
             setForm({
               ...form,

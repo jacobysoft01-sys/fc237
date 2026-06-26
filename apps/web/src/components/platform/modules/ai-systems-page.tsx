@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { BrainCircuit } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { toIdArray, toOptionalId } from "@/components/platform/modules/id-helpers";
 import {
   EmptyState,
   Field,
@@ -108,10 +109,10 @@ export function AiSystemsPage() {
             event.preventDefault();
             await create({
               ...form,
-              relatedPolicyId: form.relatedPolicyId || undefined,
-              relatedVendorEvaluationId: form.relatedVendorEvaluationId || undefined,
-              relatedControlIds: form.relatedControlIds.length ? (form.relatedControlIds as any) : undefined,
-              relatedEvidenceIds: form.relatedEvidenceIds.length ? (form.relatedEvidenceIds as any) : undefined,
+              relatedPolicyId: toOptionalId<"policies">(form.relatedPolicyId),
+              relatedVendorEvaluationId: toOptionalId<"vendorEvaluations">(form.relatedVendorEvaluationId),
+              relatedControlIds: toIdArray<"controls">(form.relatedControlIds),
+              relatedEvidenceIds: toIdArray<"evidence">(form.relatedEvidenceIds),
               personalDataFlags: form.personalDataFlags
                 .split(",")
                 .map((item) => item.trim())

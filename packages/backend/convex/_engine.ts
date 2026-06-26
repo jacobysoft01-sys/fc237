@@ -226,12 +226,17 @@ function buildEvidenceCoverage(snapshot: WorkspaceSnapshot, scores: Record<strin
     (control) => control.evidenceRequired && control.implementationStatus !== "not_applicable",
   );
   const requiredSlots = requiredControls.length;
+  const submittedControlIds = uniqueControlEvidence(
+    snapshot.evidence,
+    (item) => ["submitted", "accepted"].includes(item.status),
+  );
+  const acceptedControlIds = uniqueControlEvidence(snapshot.evidence, (item) => item.status === "accepted");
   const submittedCoverage = percent(
-    uniqueControlEvidence(snapshot.evidence, (item) => ["submitted", "accepted"].includes(item.status)).length,
+    submittedControlIds.length,
     requiredSlots,
   );
   const acceptedCoverage = percent(
-    uniqueControlEvidence(snapshot.evidence, (item) => item.status === "accepted").length,
+    acceptedControlIds.length,
     requiredSlots,
   );
   const evidenceAssessment = normalizeFivePoint(scores.evidence_maturity);
@@ -246,11 +251,13 @@ function buildEvidenceCoverage(snapshot: WorkspaceSnapshot, scores: Record<strin
     } satisfies DomainScore,
     rollup: {
       requiredSlots,
+      submittedSlots: submittedControlIds.length,
+      acceptedSlots: acceptedControlIds.length,
       submittedCoverage,
       acceptedCoverage,
       expiringCount: snapshot.evidence.filter((item) => isPastDate(item.expiryDate)).length,
       missingControlIds: requiredControls
-        .filter((control) => !uniqueControlEvidence(snapshot.evidence, (item) => ["submitted", "accepted"].includes(item.status)).includes(String(control._id)))
+        .filter((control) => !submittedControlIds.includes(String(control._id)))
         .map((control) => control._id),
     },
   };

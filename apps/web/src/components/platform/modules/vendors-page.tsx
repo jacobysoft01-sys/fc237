@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { Building2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { toIdArray } from "@/components/platform/modules/id-helpers";
 import {
   EmptyState,
   Field,
@@ -109,8 +110,8 @@ export function VendorsPage() {
               certifications: form.certifications.split(",").map((item) => item.trim()).filter(Boolean),
               documentsReceived: form.documentsReceived.split(",").map((item) => item.trim()).filter(Boolean),
               outstandingGaps: form.outstandingGaps.split(",").map((item) => item.trim()).filter(Boolean),
-              relatedAiSystemIds: form.relatedAiSystemIds.length ? (form.relatedAiSystemIds as any) : undefined,
-              relatedCloudServiceIds: form.relatedCloudServiceIds.length ? (form.relatedCloudServiceIds as any) : undefined,
+              relatedAiSystemIds: toIdArray<"aiSystems">(form.relatedAiSystemIds),
+              relatedCloudServiceIds: toIdArray<"cloudServices">(form.relatedCloudServiceIds),
             });
             setForm({
               ...form,

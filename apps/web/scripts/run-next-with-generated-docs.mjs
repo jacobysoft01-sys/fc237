@@ -14,6 +14,7 @@ function run(args, env = process.env) {
     const child = spawn(pnpm, args, {
       stdio: "inherit",
       env,
+      shell: isWindows,
     });
 
     child.on("error", reject);

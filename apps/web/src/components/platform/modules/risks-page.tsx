@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { AlertTriangle, Gauge } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { toIdArray, toOptionalId } from "@/components/platform/modules/id-helpers";
 import {
   EmptyState,
   Field,
@@ -110,9 +111,9 @@ export function RisksPage({ aiOnly = false }: { aiOnly?: boolean }) {
             event.preventDefault();
             await create({
               ...form,
-              relatedAiSystemId: form.relatedAiSystemId || undefined,
-              relatedVendorEvaluationId: form.relatedVendorEvaluationId || undefined,
-              relatedControlIds: form.relatedControlIds.length ? (form.relatedControlIds as any) : undefined,
+              relatedAiSystemId: toOptionalId<"aiSystems">(form.relatedAiSystemId),
+              relatedVendorEvaluationId: toOptionalId<"vendorEvaluations">(form.relatedVendorEvaluationId),
+              relatedControlIds: toIdArray<"controls">(form.relatedControlIds),
             });
             setForm({
               ...form,

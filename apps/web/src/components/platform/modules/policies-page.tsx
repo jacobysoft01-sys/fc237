@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { LockKeyhole } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { toIdArray } from "@/components/platform/modules/id-helpers";
 import {
   EmptyState,
   Field,
@@ -102,7 +103,7 @@ export function PoliciesPage() {
               effectiveDate: form.effectiveDate || undefined,
               expiryDate: form.expiryDate || undefined,
               approvedAt: form.approvedAt || undefined,
-              relatedControlIds: form.relatedControlIds.length ? (form.relatedControlIds as any) : undefined,
+              relatedControlIds: toIdArray<"controls">(form.relatedControlIds),
             });
             setForm({
               ...form,

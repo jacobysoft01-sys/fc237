@@ -365,7 +365,7 @@ export function FrameworkPage() {
 
   const overview = dashboard && !dashboard.needsOnboarding ? dashboard : null;
 
-  const selectedFrameworks = overview?.organization.selectedFrameworks ?? [];
+  const selectedFrameworks = overview?.organization?.selectedFrameworks ?? [];
   const profileCompletion = organizationProfileCompletion(overview?.organization);
   const requiredEvidenceSlots = overview?.evidenceRollup.requiredSlots ?? 0;
   const acceptedEvidenceSlots = overview?.evidenceRollup.acceptedSlots ?? 0;
@@ -838,7 +838,7 @@ export function ResourcesPage() {
 
   const overview = dashboard && !dashboard.needsOnboarding ? dashboard : null;
   const profileCompletion = organizationProfileCompletion(overview?.organization);
-  const selectedFrameworks = overview?.organization.selectedFrameworks ?? [];
+  const selectedFrameworks = overview?.organization?.selectedFrameworks ?? [];
   const { recommendedKey, stageCards } = overview
     ? buildJourneyStageCards({
         overview,
