@@ -5,9 +5,11 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { v } from "convex/values";
 
+import type { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import {
+  type AssistantResponse,
   buildAssistantWorkspaceContext,
   buildCameroonSystemPrompt,
   buildFallbackResponse,
@@ -57,12 +59,17 @@ function trimMessageHistory(messages: any[]) {
     .filter((message) => message.content.trim().length > 0);
 }
 
+type SendMessageResult = {
+  sessionId: Id<"chatSessions">;
+  response: AssistantResponse;
+};
+
 export const sendMessage = action({
   args: {
     content: v.string(),
     sessionId: v.optional(v.id("chatSessions")),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<SendMessageResult> => {
     const current = await ctx.runQuery(api.organizations.getCurrent, {});
     if (!current?.organization || !current.user) {
       throw new Error("Organization setup required");
@@ -81,7 +88,7 @@ export const sendMessage = action({
     const sessionTitle = (args.sessionId ? messages[0]?.content : args.content)?.slice(0, 60) || "FC237 Assistant";
     const openAI = getOpenAISettings();
 
-    let structuredResponse;
+    let structuredResponse: AssistantResponse;
     let provider = "OpenAI Responses API";
     let providerModel = openAI?.model ?? "workspace-grounded-fallback";
 
@@ -165,7 +172,7 @@ export const sendMessage = action({
       });
     }
 
-    const persistence = await ctx.runMutation(internal.assistant.saveConversationTurn, {
+    const persistence: { sessionId: Id<"chatSessions"> } = await ctx.runMutation(internal.assistant.saveConversationTurn, {
       organizationId: current.organization._id,
       userId: current.user._id,
       content: args.content,
