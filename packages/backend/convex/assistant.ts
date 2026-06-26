@@ -67,7 +67,7 @@ export const saveConversationTurn = internalMutation({
     if (sessionId) {
       const existingSession = await ctx.db.get(sessionId);
       if (!existingSession || existingSession.organizationId !== args.organizationId) {
-        throw new Error("Assistant session not found");
+        throw new Error("We couldn't reopen that saved conversation. Start a new assistant thread and try again.");
       }
     } else {
       sessionId = await ctx.db.insert("chatSessions", {

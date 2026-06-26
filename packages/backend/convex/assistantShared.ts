@@ -14,6 +14,7 @@ export type AssistantResponse = {
   disclaimer: string;
   provider: string;
   providerModel: string;
+  deliveryNote?: string;
 };
 
 const DEFAULT_CAMEROON_CONTEXT =
@@ -47,6 +48,7 @@ const assistantResponseSchema = {
     disclaimer: { type: "string" },
     provider: { type: "string" },
     providerModel: { type: "string" },
+    deliveryNote: { type: "string" },
   },
   required: [
     "mode",
@@ -207,6 +209,7 @@ export function normalizeAssistantResponse(payload: any, fallbackMode: Assistant
     disclaimer: String(response.disclaimer ?? DEFAULT_DISCLAIMER).trim(),
     provider: String(response.provider ?? "OpenAI Responses API").trim(),
     providerModel: String(response.providerModel ?? providerModel).trim(),
+    deliveryNote: typeof response.deliveryNote === "string" ? response.deliveryNote.trim() : undefined,
   };
 }
 
@@ -222,21 +225,21 @@ export function buildFallbackResponse(
   mode: AssistantMode,
   overview: any,
   prompt: string,
-  options: { fallbackReason?: string; provider?: string; providerModel?: string; reportPreview?: any } = {},
+  options: { fallbackReason?: string; deliveryNote?: string; provider?: string; providerModel?: string; reportPreview?: any } = {},
 ): AssistantResponse {
   const lowest = [...(overview?.domainScores ?? [])].sort((left: any, right: any) => left.score - right.score)[0];
   const topRisk = overview?.topRisks?.[0];
   const firstAction = overview?.nextActions?.[0];
   const reportSummary = options.reportPreview?.complianceSummary?.summary;
   const promptText = prompt.toLowerCase();
-  const fallbackPrefix = options.fallbackReason ? `Fallback note: ${options.fallbackReason} ` : "";
   const provider = options.provider ?? "FC237 fallback guidance";
   const providerModel = options.providerModel ?? "workspace-grounded-fallback";
+  const deliveryNote = options.deliveryNote ?? options.fallbackReason;
 
   if (mode === "Assessment") {
     return {
       mode,
-      answer: `${fallbackPrefix}The latest readiness posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${(lowest?.label ?? "Readiness")} is the weakest domain right now, so the next assessment cycle should focus there first.`,
+      answer: `The latest readiness posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${(lowest?.label ?? "Readiness")} is the weakest domain right now, so the next assessment cycle should focus there first.`,
       identifiedRisk:
         topRisk?.title ??
         "Readiness gaps can hide weak identity controls, missing vendor review, or incomplete incident preparation.",
@@ -251,13 +254,14 @@ export function buildFallbackResponse(
       disclaimer: DEFAULT_DISCLAIMER,
       provider,
       providerModel,
+      deliveryNote,
     };
   }
 
   if (mode === "Evidence") {
     return {
       mode,
-      answer: `${fallbackPrefix}Evidence coverage is ${overview?.evidenceRollup?.acceptedCoverage ?? 0}% accepted and ${overview?.evidenceRollup?.submittedCoverage ?? 0}% submitted across ${overview?.evidenceRollup?.requiredSlots ?? 0} required slots. Missing or expired evidence weakens assurance, especially for customer-data and Cameroon-facing audit questions.`,
+      answer: `Evidence coverage is ${overview?.evidenceRollup?.acceptedCoverage ?? 0}% accepted and ${overview?.evidenceRollup?.submittedCoverage ?? 0}% submitted across ${overview?.evidenceRollup?.requiredSlots ?? 0} required slots. Missing or expired evidence weakens assurance, especially for customer-data and Cameroon-facing audit questions.`,
       identifiedRisk: "Missing or expired evidence weakens assurance even when teams believe controls are in place.",
       recommendedActions: [
         "Link every required control to at least one submitted artifact.",
@@ -274,13 +278,14 @@ export function buildFallbackResponse(
       disclaimer: DEFAULT_DISCLAIMER,
       provider,
       providerModel,
+      deliveryNote,
     };
   }
 
   if (mode === "Incident") {
     return {
       mode,
-      answer: `${fallbackPrefix}Incident readiness is ${overview?.domainScores?.find((item: any) => item.key === "incident_readiness")?.score ?? 0}%. ${overview?.incidentRollup?.unresolved ?? 0} incidents are still unresolved, so containment records and escalation discipline should come before cosmetic reporting.`,
+      answer: `Incident readiness is ${overview?.domainScores?.find((item: any) => item.key === "incident_readiness")?.score ?? 0}%. ${overview?.incidentRollup?.unresolved ?? 0} incidents are still unresolved, so containment records and escalation discipline should come before cosmetic reporting.`,
       identifiedRisk: "Slow containment or poor documentation can extend business disruption and reduce legal or audit defensibility.",
       recommendedActions: [
         "Record scope, timeline, and evidence immediately.",
@@ -297,13 +302,14 @@ export function buildFallbackResponse(
       disclaimer: DEFAULT_DISCLAIMER,
       provider,
       providerModel,
+      deliveryNote,
     };
   }
 
   if (mode === "Report") {
     return {
       mode,
-      answer: `${fallbackPrefix}The current production-ready report is the Compliance Readiness Summary. It should only be exported after you review live scores, top risks, evidence coverage, and any Cameroon-specific legal uncertainty that still needs local confirmation.${reportSummary ? ` ${reportSummary}` : ""}`,
+      answer: `The current production-ready report is the Compliance Readiness Summary. It should only be exported after you review live scores, top risks, evidence coverage, and any Cameroon-specific legal uncertainty that still needs local confirmation.${reportSummary ? ` ${reportSummary}` : ""}`,
       identifiedRisk: "Reports become misleading when scores are stale or not backed by current linked records.",
       recommendedActions: [
         "Regenerate actions before creating the report.",
@@ -320,6 +326,7 @@ export function buildFallbackResponse(
       disclaimer: DEFAULT_DISCLAIMER,
       provider,
       providerModel,
+      deliveryNote,
     };
   }
 
@@ -327,7 +334,7 @@ export function buildFallbackResponse(
     const draftOrExpired = overview?.policyRollup?.draftOrExpired ?? 0;
     return {
       mode,
-      answer: `${fallbackPrefix}Policy maturity is ${overview?.domainScores?.find((item: any) => item.key === "policy_maturity")?.score ?? 0}%. ${draftOrExpired} policies are draft or expired, so governance defensibility is weaker than it should be.`,
+      answer: `Policy maturity is ${overview?.domainScores?.find((item: any) => item.key === "policy_maturity")?.score ?? 0}%. ${draftOrExpired} policies are draft or expired, so governance defensibility is weaker than it should be.`,
       identifiedRisk: "Outdated or missing baseline policies weaken approval workflows, evidence collection, and incident discipline.",
       recommendedActions: [
         "Create any missing priority policy types first.",
@@ -344,6 +351,7 @@ export function buildFallbackResponse(
       disclaimer: DEFAULT_DISCLAIMER,
       provider,
       providerModel,
+      deliveryNote,
     };
   }
 
@@ -355,7 +363,7 @@ export function buildFallbackResponse(
         : `${overview?.riskRollup?.highOrCritical ?? 0} high or critical risks need treatment.`;
     return {
       mode,
-      answer: `${fallbackPrefix}Start with the weakest domain, ${lowest?.label ?? "current readiness"}, then close the highest-risk action items with clear owners, dates, and evidence paths.`,
+      answer: `Start with the weakest domain, ${lowest?.label ?? "current readiness"}, then close the highest-risk action items with clear owners, dates, and evidence paths.`,
       identifiedRisk: riskMessage,
       recommendedActions: (overview?.nextActions ?? []).slice(0, 4).map((task: any) => task.title),
       priority: lowest?.status ?? "Moderate",
@@ -368,12 +376,13 @@ export function buildFallbackResponse(
       disclaimer: DEFAULT_DISCLAIMER,
       provider,
       providerModel,
+      deliveryNote,
     };
   }
 
   return {
     mode,
-    answer: `${fallbackPrefix}Overall FC237 posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${overview?.assistantInsight?.summary ?? "Review the dashboard and next actions to choose the next best governance step."}`,
+    answer: `Overall FC237 posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${overview?.assistantInsight?.summary ?? "Review the dashboard and next actions to choose the next best governance step."}`,
     identifiedRisk: topRisk?.title ?? "The main risk is losing sight of the next highest-value action.",
     recommendedActions: overview?.assistantInsight?.recommendedActions ?? [],
     priority: overview?.score?.status ?? "Moderate",
@@ -386,5 +395,6 @@ export function buildFallbackResponse(
     disclaimer: DEFAULT_DISCLAIMER,
     provider,
     providerModel,
+    deliveryNote,
   };
 }

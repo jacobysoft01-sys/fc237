@@ -5,7 +5,7 @@ import { Button } from "@FC237/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@FC237/ui/components/card";
 import { Input } from "@FC237/ui/components/input";
 import { useAction, useQuery } from "convex/react";
-import { Bot } from "lucide-react";
+import { AlertCircle, Bot } from "lucide-react";
 import { useState } from "react";
 
 import { EmptyState, ModulePage, SectionCard, SummaryGrid } from "@/components/platform/modules/shared";
@@ -20,11 +20,46 @@ const shortcuts = [
   "Which policy should I draft or approve next?",
 ];
 
+type AssistantUiError = {
+  detail: string;
+  title: string;
+};
+
+function formatAssistantUiError(submissionError: unknown): AssistantUiError {
+  const message = submissionError instanceof Error ? submissionError.message : "";
+
+  if (message.includes("Finish workspace setup")) {
+    return {
+      title: "Finish workspace setup",
+      detail: "Create or select an organization first so the assistant can read your live FC237 records.",
+    };
+  }
+
+  if (message.includes("Complete onboarding")) {
+    return {
+      title: "Complete onboarding first",
+      detail: "The assistant needs a baseline assessment and dashboard context before it can guide the next compliance step.",
+    };
+  }
+
+  if (message.includes("saved conversation")) {
+    return {
+      title: "Conversation unavailable",
+      detail: "That saved thread could not be reopened. Start a fresh assistant conversation and continue from there.",
+    };
+  }
+
+  return {
+    title: "Assistant temporarily unavailable",
+    detail: "We couldn't complete that request just now. Retry in a moment, or use the guided shortcuts once provider access is restored.",
+  };
+}
+
 export function AssistantPage() {
   const [sessionId, setSessionId] = useState<any>();
   const [content, setContent] = useState("");
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<AssistantUiError | null>(null);
   const sessions = useQuery(api.assistant.listSessions) ?? [];
   const messages = useQuery(api.assistant.listMessages, { sessionId }) ?? [];
   const dashboard = useQuery(api.dashboard.getOverview);
@@ -34,13 +69,13 @@ export function AssistantPage() {
     const prompt = message.trim();
     if (!prompt) return;
     setPending(true);
-    setError("");
+    setError(null);
     try {
       const result = await sendMessage({ content: prompt, sessionId });
       setSessionId(result.sessionId);
       setContent("");
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "Assistant request failed.");
+      setError(formatAssistantUiError(submissionError));
     } finally {
       setPending(false);
     }
@@ -49,7 +84,7 @@ export function AssistantPage() {
   return (
     <ModulePage
       title="Assistant"
-      description="The FC237 assistant now uses the OpenAI Responses API with workspace grounding and a Cameroon-aware governance prompt so advice stays practical, compliance-minded, and linked to your real platform state."
+      description="The FC237 assistant uses your live workspace data with Cameroon-aware governance instructions and can switch between OpenAI and Gemini so guidance stays practical even when one provider is unavailable."
       icon={Bot}
       summary={
         <SummaryGrid
@@ -74,8 +109,8 @@ export function AssistantPage() {
             },
             {
               label: "Runtime",
-              value: "OpenAI",
-              detail: "Responses are grounded in current FC237 records and a Cameroon-first governance prompt.",
+              value: "OpenAI + Gemini",
+              detail: "Responses stay grounded in FC237 records and can fail over between providers when credits or availability change.",
               tone: "green",
             },
           ]}
@@ -134,8 +169,14 @@ export function AssistantPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <StatusBadge tone="purple">{message.structuredResponse.mode}</StatusBadge>
                           {message.structuredResponse.referencedScore ? <StatusBadge tone="green">{message.structuredResponse.referencedScore}</StatusBadge> : null}
+                          {message.structuredResponse.provider ? <StatusBadge tone="green">{message.structuredResponse.provider}</StatusBadge> : null}
                           {message.structuredResponse.providerModel ? <StatusBadge tone="orange">{message.structuredResponse.providerModel}</StatusBadge> : null}
                         </div>
+                        {message.structuredResponse.deliveryNote ? (
+                          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-900 dark:text-amber-200">
+                            {message.structuredResponse.deliveryNote}
+                          </div>
+                        ) : null}
                         <div>
                           <b>Risk:</b> {message.structuredResponse.identifiedRisk}
                         </div>
@@ -163,7 +204,17 @@ export function AssistantPage() {
                 ))}
               </div>
             )}
-            {error ? <div className="rounded-2xl border border-rose-300/70 bg-rose-50/80 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{error}</div> : null}
+            {error ? (
+              <div className="flex items-start gap-3 rounded-3xl border border-rose-300/70 bg-rose-50/90 px-4 py-4 text-sm text-rose-900 shadow-sm dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
+                <div className="mt-0.5 rounded-full bg-rose-500/15 p-2 text-rose-600 dark:text-rose-300">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="grid gap-1">
+                  <p className="font-semibold">{error.title}</p>
+                  <p className="text-rose-700/90 dark:text-rose-200/90">{error.detail}</p>
+                </div>
+              </div>
+            ) : null}
             <form
               className="grid grid-cols-[1fr_auto] gap-2"
               onSubmit={(event) => {

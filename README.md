@@ -48,7 +48,9 @@ Required production values:
 - Vercel: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - Vercel: `CLERK_SECRET_KEY`
 - Convex dashboard environment: `CLERK_JWT_ISSUER_DOMAIN`
-- Convex dashboard environment: `OPENAI_API_KEY` if you want the assistant enabled in production
+- Convex dashboard environment: `OPENAI_API_KEY` and/or `GEMINI_API_KEY` if you want the assistant enabled in production
+- Optional assistant environment: `ASSISTANT_PROVIDER` with `openai`, `gemini`, or `auto`
+- Optional assistant environment: `OPENAI_MODEL` or `GEMINI_MODEL` if you want to override the default assistant model
 
 Required production alignment:
 
@@ -57,6 +59,12 @@ Required production alignment:
 - Set the Convex auth issuer to the same Clerk issuer used by that `convex` JWT template
 
 If the FC237 shell shows a Convex setup banner after sign-in, the web app rendered successfully but Convex deployment, URL, or Clerk-to-Convex auth alignment still needs attention.
+
+Assistant runtime notes:
+
+- FC237 can use OpenAI and Gemini from the same deployment
+- If one provider is unavailable or out of credits, the assistant will try the other configured provider automatically
+- If no live provider succeeds, FC237 falls back to workspace-grounded guidance instead of exposing raw API errors
 
 ### Clerk Authentication Setup
 

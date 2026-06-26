@@ -1550,8 +1550,8 @@ export function AdminPage() {
             },
             {
               label: "Assistant Runtime",
-              value: "OpenAI",
-              detail: "Assistant output is model-backed but still grounded in stored records, scoring, and action-plan state.",
+              value: "OpenAI + Gemini",
+              detail: "Assistant output is model-backed, grounded in stored records, and can fail over between providers when availability changes.",
               tone: "green",
             },
           ]}

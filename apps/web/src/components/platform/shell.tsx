@@ -45,7 +45,7 @@ const navGroups: NavGroup[] = [
     title: "Command Center",
     items: [
       { href: "/dashboard", label: "Dashboard", helper: "Overall score and domain signals", icon: Home },
-      { href: "/assistant", label: "Assistant", helper: "OpenAI guidance for Cameroon context", icon: Bot },
+      { href: "/assistant", label: "Assistant", helper: "OpenAI or Gemini guidance for Cameroon context", icon: Bot },
       { href: "/action-plan", label: "Action Plan", helper: "Recommended next actions", icon: ClipboardCheck },
     ],
   },

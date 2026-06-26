@@ -79,7 +79,7 @@ export default function Home() {
             <CardContent className="grid gap-4 p-6">
               {[
                 ["Executive command center", "Compliance score, evidence coverage, open findings, and high-risk AI systems."],
-                ["Guided FC237 assistant", "OpenAI-backed guidance grounded in live FC237 records and Cameroon-aware governance instructions."],
+                ["Guided FC237 assistant", "OpenAI or Gemini guidance grounded in live FC237 records and Cameroon-aware governance instructions."],
                 ["Evidence Vault", "Link screenshots, access reviews, policies, incident logs, and reports to controls."],
                 ["Framework mapping", "Track FC237 progress against ISO 27001, NIST AI RMF, and EU AI Act."],
               ].map(([title, body]) => (
