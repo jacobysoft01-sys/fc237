@@ -8,7 +8,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { ProjectLogo } from "@/components/project-logo";
-import { FC237_PRODUCT_TAGLINE, FC237_WORKFLOW_SEQUENCE } from "@/lib/branding";
+import { FC237_PRODUCT_TAGLINE } from "@/lib/branding";
 
 export default function Home() {
   return (
@@ -17,7 +17,7 @@ export default function Home() {
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div>
-              <ProjectLogo className="max-w-[150px]" />
+              <ProjectLogo className="max-w-[190px]" />
               <div className="mt-1 text-xs text-muted-foreground">{FC237_PRODUCT_TAGLINE}</div>
             </div>
           </Link>
@@ -53,9 +53,6 @@ export default function Home() {
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
               Start with the readiness questionnaire, review the dashboard, build inventory, treat risks, implement controls, collect evidence, measure maturity, and generate report-ready compliance output from one command center.
             </p>
-            <div className="mt-5 rounded-[1.5rem] border border-border/70 bg-background/70 px-4 py-4 text-sm text-muted-foreground shadow-sm">
-              <span className="font-medium text-foreground">FC237 workflow:</span> {FC237_WORKFLOW_SEQUENCE}
-            </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Show when="signed-out">
                 <SignUpButton mode="modal">
