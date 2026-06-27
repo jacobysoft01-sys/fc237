@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { SummaryGrid } from "@/components/platform/modules/shared";
 import { PageHeader } from "@/components/platform/page-header";
 import { ProgressLine, StatusBadge } from "@/components/platform/ui";
 import type { ConvexLoadState } from "@/lib/convex-page-load";
@@ -125,32 +126,34 @@ function DashboardPageContent({
         </div>
       </PageHeader>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <OverviewMetric
-          label="Overall FC237 Score"
-          value={`${overview.score.overall}%`}
-          detail={`Equal-weight average across seven domains. Current status: ${overview.score.status}.`}
-          tone={toneForStatus(overview.score.status)}
-        />
-        <OverviewMetric
-          label="Open Actions"
-          value={`${overview.nextActions.length}`}
-          detail="Highest-priority recommended actions currently visible in the queue."
-          tone={overview.nextActions.length > 0 ? "orange" : "green"}
-        />
-        <OverviewMetric
-          label="Urgent Risks"
-          value={`${overview.riskRollup.highOrCritical}`}
-          detail={`${overview.riskRollup.withoutControls} risks are still missing linked controls.`}
-          tone={overview.riskRollup.highOrCritical > 0 ? "red" : "green"}
-        />
-        <OverviewMetric
-          label="Evidence Coverage"
-          value={`${overview.evidenceRollup.acceptedCoverage}%`}
-          detail={`${overview.evidenceRollup.requiredSlots} required control slots tracked with ${overview.evidenceRollup.submittedCoverage}% submitted coverage.`}
-          tone={overview.evidenceRollup.acceptedCoverage >= 70 ? "green" : "orange"}
-        />
-      </section>
+      <SummaryGrid
+        items={[
+          {
+            label: "Overall FC237 Score",
+            value: `${overview.score.overall}%`,
+            detail: `Equal-weight average across seven domains. Current status: ${overview.score.status}.`,
+            tone: toneForStatus(overview.score.status),
+          },
+          {
+            label: "Open Actions",
+            value: `${overview.nextActions.length}`,
+            detail: "Highest-priority recommended actions currently visible in the queue.",
+            tone: overview.nextActions.length > 0 ? "orange" : "green",
+          },
+          {
+            label: "Urgent Risks",
+            value: `${overview.riskRollup.highOrCritical}`,
+            detail: `${overview.riskRollup.withoutControls} risks are still missing linked controls.`,
+            tone: overview.riskRollup.highOrCritical > 0 ? "red" : "green",
+          },
+          {
+            label: "Evidence Coverage",
+            value: `${overview.evidenceRollup.acceptedCoverage}%`,
+            detail: `${overview.evidenceRollup.requiredSlots} required control slots tracked with ${overview.evidenceRollup.submittedCoverage}% submitted coverage.`,
+            tone: overview.evidenceRollup.acceptedCoverage >= 70 ? "green" : "orange",
+          },
+        ]}
+      />
 
       <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
         <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
@@ -159,7 +162,7 @@ function DashboardPageContent({
           </CardHeader>
           <CardContent className="grid gap-4">
             {overview.domainScores.map((domain: any) => (
-              <div className="rounded-[1.65rem] border border-border/70 bg-background/82 p-5" key={domain.key}>
+              <div className="rounded-[1.65rem] bg-muted/18 px-5 py-4" key={domain.key}>
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-lg font-semibold">{domain.label}</div>
@@ -187,7 +190,7 @@ function DashboardPageContent({
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div className="rounded-[1.65rem] border border-border/70 bg-background/82 p-5">
+            <div className="rounded-[1.65rem] bg-muted/18 px-5 py-4">
               <div className="flex items-center gap-2">
                 <StatusBadge tone="neutral">{overview.assistantInsight.mode}</StatusBadge>
                 <StatusBadge tone={toneForStatus(overview.score.status)}>{overview.score.status}</StatusBadge>
@@ -197,7 +200,7 @@ function DashboardPageContent({
             </div>
             <div className="grid gap-2">
               {overview.assistantInsight.recommendedActions.map((action: string) => (
-                <div className="rounded-[1.25rem] border border-border/70 bg-background/78 px-4 py-3 text-sm" key={action}>
+                <div className="rounded-[1.25rem] bg-muted/18 px-4 py-3 text-sm" key={action}>
                   {action}
                 </div>
               ))}
@@ -220,7 +223,7 @@ function DashboardPageContent({
               <p className="text-sm text-muted-foreground">No active recommended actions are open right now.</p>
             ) : (
               overview.nextActions.map((task: any) => (
-                <div className="rounded-[1.55rem] border border-border/70 bg-background/82 p-4" key={task._id}>
+                <div className="rounded-[1.55rem] bg-muted/18 px-4 py-4" key={task._id}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold">{task.title}</div>
@@ -232,7 +235,7 @@ function DashboardPageContent({
                     </div>
                   </div>
                   <div className="mt-3 text-xs text-muted-foreground">
-                    Due {task.dueDate} · {task.sourceType.replaceAll("_", " ")}
+                    {`Due ${task.dueDate} - ${task.sourceType.replaceAll("_", " ")}`}
                   </div>
                 </div>
               ))
@@ -257,7 +260,7 @@ function DashboardPageContent({
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Top Risks</div>
               <div className="mt-3 grid gap-2">
                 {overview.topRisks.map((risk: any) => (
-                  <div className="rounded-[1.25rem] border border-border/70 bg-background/78 p-3" key={risk._id}>
+                  <div className="rounded-[1.25rem] bg-muted/18 px-4 py-3" key={risk._id}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-sm font-semibold">{risk.title}</div>
                       <StatusBadge tone={toneForStatus(risk.riskLevel)}>{risk.riskLevel}</StatusBadge>
@@ -279,7 +282,7 @@ function DashboardPageContent({
             <OverviewLine label="Submitted Coverage" value={`${overview.evidenceRollup.submittedCoverage}%`} />
             <OverviewLine label="Accepted Coverage" value={`${overview.evidenceRollup.acceptedCoverage}%`} />
             <OverviewLine label="Expired Items" value={`${overview.evidenceRollup.expiringCount}`} />
-            <div className="rounded-[1.5rem] border border-border/70 bg-background/78 p-4 text-sm text-muted-foreground">
+            <div className="rounded-[1.5rem] bg-muted/18 px-4 py-4 text-sm text-muted-foreground">
               Missing evidence slots are created from controls that require proof and do not yet have submitted or accepted artifacts.
             </div>
           </CardContent>
@@ -296,7 +299,7 @@ function DashboardPageContent({
             <OverviewLine label="Maturity Level" value={`${overview.maturitySupport.level} - ${overview.maturitySupport.label}`} />
             <div className="grid gap-3 md:grid-cols-2">
               {overview.maturitySupport.domains.map((domain: any) => (
-                <div className="rounded-[1.25rem] border border-border/70 bg-background/78 p-3" key={domain.key}>
+                <div className="rounded-[1.25rem] bg-muted/18 px-4 py-3" key={domain.key}>
                   <div className="text-sm font-semibold">{domain.domain}</div>
                   <div className="mt-1 text-sm text-muted-foreground">{domain.score}/5</div>
                 </div>
@@ -312,7 +315,7 @@ function DashboardPageContent({
           <CardContent className="grid gap-4">
             <div className="grid gap-3">
               {overview.reportPreviews.map((report: any) => (
-                <div className="rounded-[1.55rem] border border-border/70 bg-background/82 p-4" key={report.key}>
+                <div className="rounded-[1.55rem] bg-muted/18 px-4 py-4" key={report.key}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold">{report.title}</div>
@@ -323,7 +326,7 @@ function DashboardPageContent({
                 </div>
               ))}
             </div>
-            <div className="rounded-[1.55rem] border border-border/70 bg-background/82 p-4">
+            <div className="rounded-[1.55rem] bg-muted/18 px-4 py-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <TriangleAlert className="size-4 text-muted-foreground" />
                 Recent activity
@@ -333,7 +336,7 @@ function DashboardPageContent({
                   <span>No recent audit events yet.</span>
                 ) : (
                   overview.recentActivity.map((item: any) => (
-                    <div className="flex items-center justify-between gap-3 rounded-[1rem] border border-border/60 bg-background/70 px-3 py-2" key={item._id}>
+                    <div className="flex items-center justify-between gap-3 rounded-[1rem] bg-background/45 px-3 py-2" key={item._id}>
                       <span>{item.action.replaceAll(".", " ")}</span>
                       <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
@@ -395,31 +398,9 @@ function DiagnosticPill({ label, ok }: { label: string; ok: boolean }) {
   );
 }
 
-function OverviewMetric({
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: "neutral" | "purple" | "green" | "orange" | "red";
-}) {
-  return (
-    <Card className="min-h-[17.5rem] rounded-[1.9rem] border-0 shadow-sm ring-1 ring-border/80">
-      <CardContent className="flex h-full flex-col p-6">
-        <div className="max-w-[14rem] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-        <div className="mt-7 text-5xl font-semibold tracking-[-0.04em] text-foreground">{value}</div>
-        <div className="mt-5 max-w-[16rem] text-[1.02rem] leading-8 text-muted-foreground">{detail}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function OverviewLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-background/78 px-4 py-3 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-[1.25rem] bg-muted/18 px-4 py-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
@@ -439,4 +420,5 @@ function DashboardSkeleton() {
     </div>
   );
 }
+
 

@@ -62,18 +62,50 @@ export function SummaryGrid({
     tone?: "neutral" | "purple" | "green" | "yellow" | "orange" | "red";
   }>;
 }) {
+  const glows = {
+    neutral: "bg-white/8",
+    purple: "bg-primary/16",
+    green: "bg-emerald-400/14",
+    yellow: "bg-amber-400/14",
+    orange: "bg-orange-400/14",
+    red: "bg-rose-400/14",
+  } as const;
+
+  const dots = {
+    neutral: "bg-foreground/40",
+    purple: "bg-primary",
+    green: "bg-emerald-400",
+    yellow: "bg-amber-400",
+    orange: "bg-orange-400",
+    red: "bg-rose-400",
+  } as const;
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      {items.map((item) => (
-        <Card className="min-h-[15.5rem] rounded-[1.9rem] border-0 shadow-sm ring-1 ring-border/80" key={item.label}>
-          <CardContent className="flex h-full flex-col p-6">
-            <div className="max-w-[14rem] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.label}</div>
-            <div className="mt-7 text-5xl font-semibold tracking-[-0.04em] text-foreground">{item.value}</div>
-            <p className="mt-5 max-w-[16rem] text-[1.02rem] leading-8 text-muted-foreground">{item.detail}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <Card className="overflow-hidden rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
+      <CardContent className="p-0">
+        {items.map((item, index) => {
+          const tone = item.tone ?? "neutral";
+          return (
+            <div
+              className={cn("relative overflow-hidden px-6 py-6", index > 0 ? "border-t border-border/60" : "")}
+              key={item.label}
+            >
+              <div className={cn("pointer-events-none absolute left-4 top-4 size-20 rounded-full blur-3xl", glows[tone])} />
+              <div className="relative flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-6">
+                <div className="min-w-[13rem]">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("size-2 rounded-full", dots[tone])} />
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.label}</div>
+                  </div>
+                </div>
+                <div className="min-w-[8rem] text-4xl font-semibold tracking-[-0.04em] text-foreground">{item.value}</div>
+                <p className="max-w-2xl text-sm leading-7 text-muted-foreground">{item.detail}</p>
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
