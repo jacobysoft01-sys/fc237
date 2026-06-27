@@ -13,6 +13,7 @@ import {
   Bot,
   BrainCircuit,
   Building2,
+  ChevronsUpDown,
   ClipboardCheck,
   Cloud,
   FileText,
@@ -23,6 +24,7 @@ import {
   ListChecks,
   LockKeyhole,
   MessageSquareWarning,
+  Search,
   Server,
   Settings,
   Sparkles,
@@ -121,21 +123,41 @@ export default function PlatformShell({
 
   return (
     <div className="min-h-screen bg-transparent text-foreground">
-      <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
-        <aside className="hidden border-r border-border/70 bg-sidebar/96 backdrop-blur-xl lg:block">
+      <div className="grid min-h-screen lg:grid-cols-[320px_1fr]">
+        <aside className="hidden border-r border-border/70 bg-sidebar lg:block">
           <div className="flex h-full flex-col">
-            <Link href="/dashboard" className="grid gap-3 px-6 py-6">
-              <ProjectLogo className="max-w-[180px]" src={current?.organization?.branding?.logoUrl} />
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/82">AI Compliance And Governance</div>
-                <div className="mt-1 text-xs text-muted-foreground">Guided from initial questionnaire to continuous improvement.</div>
+            <div className="px-5 pb-5 pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <Link href="/dashboard" className="inline-flex items-center">
+                  <ProjectLogo className="w-[112px] max-w-none" src={current?.organization?.branding?.logoUrl} />
+                </Link>
+                <Button aria-label="Search navigation" size="icon-sm" variant="ghost">
+                  <Search className="size-4" />
+                </Button>
               </div>
-            </Link>
+              <div className="mt-6 rounded-[1.45rem] border border-border/70 bg-card/80 p-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full border border-border/70 bg-muted/65 text-xs font-semibold text-foreground">
+                    {(current?.organization?.name ?? (loadState?.message ? "CV" : "FC")).slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">
+                      {current?.organization?.name ?? (loadState?.message ? "Convex connection needs attention" : "FC237 workspace")}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {current?.membership?.role ?? (loadState?.message ? "Check deployment and auth alignment" : "Command center workspace")}
+                    </div>
+                  </div>
+                  <ChevronsUpDown className="size-4 text-muted-foreground" />
+                </div>
+              </div>
+              <div className="mt-5 text-xs text-muted-foreground">Guided from initial questionnaire to continuous improvement.</div>
+            </div>
 
-            <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-4 pb-4">
+            <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 pb-6">
               {navGroups.map((group) => (
                 <div key={group.title}>
-                  <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                     {group.title}
                   </div>
                   <div className="grid gap-1">
@@ -150,41 +172,25 @@ export default function PlatformShell({
                 </div>
               ))}
             </nav>
-
-            <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/92 p-4 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.22)] dark:shadow-[0_24px_48px_-36px_rgba(0,0,0,0.68)]">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full border border-border/80 bg-muted/70 text-sm font-semibold text-foreground">
-                  {(current?.organization?.name ?? (loadState?.message ? "CV" : "FC")).slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">
-                    {current?.organization?.name ?? (loadState?.message ? "Convex connection needs attention" : "Create an organization")}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {current?.membership?.role ?? (loadState?.message ? "Check deployment and auth alignment" : "No active workspace")}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/90 backdrop-blur-xl">
+          <header className="sticky top-0 z-20 border-b border-border/70 bg-background">
             <div className="flex min-h-20 flex-wrap items-center justify-between gap-4 px-4 py-4 lg:px-8">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 lg:hidden">
-                  <ProjectLogo className="max-w-[120px]" src={current?.organization?.branding?.logoUrl} />
+                  <ProjectLogo className="w-[108px] max-w-none" src={current?.organization?.branding?.logoUrl} />
                 </div>
                 <p className="hidden text-sm text-muted-foreground sm:block">
                   Guided flow: questionnaire, dashboard, inventory, risk treatment, controls, evidence, reporting, and continuous improvement.
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button aria-label="Notifications" size="icon" variant="ghost">
+                <Button aria-label="Notifications" size="icon" variant="outline">
                   <Bell />
                 </Button>
-                <Button aria-label="Help" size="icon" variant="ghost">
+                <Button aria-label="Help" size="icon" variant="outline">
                   <HelpCircle />
                 </Button>
                 <Link className={buttonVariants()} href="/assistant">
@@ -266,17 +272,14 @@ function NavLink({
     <Link
       href={item.href}
       className={cn(
-        "grid grid-cols-[20px_1fr] items-center gap-3 rounded-[1.35rem] border border-transparent px-3 py-3 text-sm transition",
+        "flex items-center gap-3 rounded-[1.35rem] border border-transparent px-4 py-3 text-sm transition",
         active
           ? "border-border/80 bg-card text-foreground shadow-sm"
           : "text-muted-foreground hover:border-border/50 hover:bg-card/70 hover:text-foreground",
       )}
     >
       <Icon className="size-4" />
-      <span className="min-w-0">
-        <span className="block truncate font-medium">{item.label}</span>
-        <span className="block truncate text-xs text-muted-foreground">{item.helper}</span>
-      </span>
+      <span className="min-w-0 truncate font-medium">{item.label}</span>
     </Link>
   );
 }

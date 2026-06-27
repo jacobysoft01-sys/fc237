@@ -9,7 +9,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/platform/page-header";
-import { ProgressLine, StatusBadge } from "@/components/platform/ui";
+import { ProgressLine } from "@/components/platform/ui";
 
 export const fieldClass =
   "min-h-10 w-full rounded-2xl border border-input/85 bg-background/92 px-3.5 py-2 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 dark:bg-input/45";
@@ -65,16 +65,11 @@ export function SummaryGrid({
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border/80" key={item.label}>
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</div>
-                <div className="mt-3 text-3xl font-semibold tracking-tight">{item.value}</div>
-              </div>
-              <StatusBadge tone={item.tone ?? "neutral"}>{item.tone ?? "live"}</StatusBadge>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{item.detail}</p>
+        <Card className="min-h-[15.5rem] rounded-[1.9rem] border-0 shadow-sm ring-1 ring-border/80" key={item.label}>
+          <CardContent className="flex h-full flex-col p-6">
+            <div className="max-w-[14rem] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{item.label}</div>
+            <div className="mt-7 text-5xl font-semibold tracking-[-0.04em] text-foreground">{item.value}</div>
+            <p className="mt-5 max-w-[16rem] text-[1.02rem] leading-8 text-muted-foreground">{item.detail}</p>
           </CardContent>
         </Card>
       ))}

@@ -26,7 +26,7 @@ function toneForStatus(status: string) {
   if (status === "Critical" || status === "Weak" || status === "critical" || status === "high") return "red";
   if (status === "Moderate" || status === "moderate") return "orange";
   if (status === "Good" || status === "Strong" || status === "accepted" || status === "green") return "green";
-  return "purple";
+  return "neutral";
 }
 
 export function DashboardPage({
@@ -82,7 +82,7 @@ function DashboardPageContent({
           title="Start with the FC237 questionnaire"
           description="Answer the initial guided questionnaire first so the command center can build the organization baseline, score the platform, and generate the first roadmap from real data."
         />
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[1.9rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardContent className="flex flex-col gap-4 p-6">
             <p className="text-sm text-muted-foreground">
               The questionnaire creates the organization profile, cloud and AI inventory, readiness baseline, linked risks, mapped controls, vendor records, evidence requirements, policies, and the first action plan.
@@ -109,15 +109,15 @@ function DashboardPageContent({
         title={`Command Center for ${overview.organization.name}`}
         description="Everything below is driven by stored platform data: seven domain scores, real evidence coverage, linked risks, and a generated action queue with no artificial score floors."
       >
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <Link href="/action-plan">
-            <Button>
+            <Button size="lg">
               <ClipboardCheck className="size-4" />
               Open Action Plan
             </Button>
           </Link>
           <Link href="/assistant">
-            <Button variant="outline">
+            <Button size="lg" variant="outline">
               <Sparkles className="size-4" />
               Ask Assistant
             </Button>
@@ -153,22 +153,22 @@ function DashboardPageContent({
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle>Domain Scores</CardTitle>
+            <CardTitle className="text-lg font-semibold">Domain Scores</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             {overview.domainScores.map((domain: any) => (
-              <div className="rounded-2xl border border-border/70 bg-background p-4" key={domain.key}>
+              <div className="rounded-[1.65rem] border border-border/70 bg-background/82 p-5" key={domain.key}>
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold">{domain.label}</div>
+                    <div className="text-lg font-semibold">{domain.label}</div>
                     <div className="mt-1 text-sm text-muted-foreground">{domain.detail}</div>
                   </div>
                   <StatusBadge tone={toneForStatus(domain.status)}>{domain.status}</StatusBadge>
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-                  <span>{domain.score}%</span>
+                <div className="mt-6 flex items-center justify-between gap-3 text-sm">
+                  <span className="text-base font-medium">{domain.score}%</span>
                   <span className="text-muted-foreground">Real stored-data score</span>
                 </div>
                 <div className="mt-2">
@@ -179,17 +179,17 @@ function DashboardPageContent({
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 bg-primary/[0.03] shadow-sm ring-1 ring-primary/15">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Bot className="size-4" />
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Bot className="size-4 text-muted-foreground" />
               Assistant Insight
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div className="rounded-2xl border border-primary/15 bg-background p-4">
+            <div className="rounded-[1.65rem] border border-border/70 bg-background/82 p-5">
               <div className="flex items-center gap-2">
-                <StatusBadge tone="purple">{overview.assistantInsight.mode}</StatusBadge>
+                <StatusBadge tone="neutral">{overview.assistantInsight.mode}</StatusBadge>
                 <StatusBadge tone={toneForStatus(overview.score.status)}>{overview.score.status}</StatusBadge>
               </div>
               <h2 className="mt-3 text-base font-semibold">{overview.assistantInsight.title}</h2>
@@ -197,7 +197,7 @@ function DashboardPageContent({
             </div>
             <div className="grid gap-2">
               {overview.assistantInsight.recommendedActions.map((action: string) => (
-                <div className="rounded-xl border border-border/70 bg-background px-3 py-3 text-sm" key={action}>
+                <div className="rounded-[1.25rem] border border-border/70 bg-background/78 px-4 py-3 text-sm" key={action}>
                   {action}
                 </div>
               ))}
@@ -211,16 +211,16 @@ function DashboardPageContent({
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr_1fr]">
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle>Recommended Next Actions</CardTitle>
+            <CardTitle className="text-lg font-semibold">Recommended Next Actions</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
             {overview.nextActions.length === 0 ? (
               <p className="text-sm text-muted-foreground">No active recommended actions are open right now.</p>
             ) : (
               overview.nextActions.map((task: any) => (
-                <div className="rounded-2xl border border-border/70 bg-background p-4" key={task._id}>
+                <div className="rounded-[1.55rem] border border-border/70 bg-background/82 p-4" key={task._id}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold">{task.title}</div>
@@ -244,9 +244,9 @@ function DashboardPageContent({
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle>Risk Overview</CardTitle>
+            <CardTitle className="text-lg font-semibold">Risk Overview</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
             <OverviewLine label="Critical" value={`${overview.riskRollup.byLevel.critical}`} />
@@ -257,14 +257,12 @@ function DashboardPageContent({
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Top Risks</div>
               <div className="mt-3 grid gap-2">
                 {overview.topRisks.map((risk: any) => (
-                  <div className="rounded-xl bg-muted/25 p-3" key={risk._id}>
+                  <div className="rounded-[1.25rem] border border-border/70 bg-background/78 p-3" key={risk._id}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-sm font-semibold">{risk.title}</div>
                       <StatusBadge tone={toneForStatus(risk.riskLevel)}>{risk.riskLevel}</StatusBadge>
                     </div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      Score {risk.riskScore} · {risk.owner}
-                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">{`Score ${risk.riskScore} - ${risk.owner}`}</div>
                   </div>
                 ))}
               </div>
@@ -272,16 +270,16 @@ function DashboardPageContent({
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle>Evidence Coverage</CardTitle>
+            <CardTitle className="text-lg font-semibold">Evidence Coverage</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
             <OverviewLine label="Required Control Slots" value={`${overview.evidenceRollup.requiredSlots}`} />
             <OverviewLine label="Submitted Coverage" value={`${overview.evidenceRollup.submittedCoverage}%`} />
             <OverviewLine label="Accepted Coverage" value={`${overview.evidenceRollup.acceptedCoverage}%`} />
             <OverviewLine label="Expired Items" value={`${overview.evidenceRollup.expiringCount}`} />
-            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+            <div className="rounded-[1.5rem] border border-border/70 bg-background/78 p-4 text-sm text-muted-foreground">
               Missing evidence slots are created from controls that require proof and do not yet have submitted or accepted artifacts.
             </div>
           </CardContent>
@@ -289,16 +287,16 @@ function DashboardPageContent({
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle>Readiness and Maturity Support</CardTitle>
+            <CardTitle className="text-lg font-semibold">Readiness and Maturity Support</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <OverviewLine label="Latest Readiness Score" value={`${overview.readiness.latestAssessmentScore}%`} />
             <OverviewLine label="Maturity Level" value={`${overview.maturitySupport.level} - ${overview.maturitySupport.label}`} />
             <div className="grid gap-3 md:grid-cols-2">
               {overview.maturitySupport.domains.map((domain: any) => (
-                <div className="rounded-xl border border-border/70 bg-background p-3" key={domain.key}>
+                <div className="rounded-[1.25rem] border border-border/70 bg-background/78 p-3" key={domain.key}>
                   <div className="text-sm font-semibold">{domain.domain}</div>
                   <div className="mt-1 text-sm text-muted-foreground">{domain.score}/5</div>
                 </div>
@@ -307,14 +305,14 @@ function DashboardPageContent({
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+        <Card className="rounded-[2rem] border-0 shadow-sm ring-1 ring-border/80">
           <CardHeader>
-            <CardTitle>Report and Activity Signals</CardTitle>
+            <CardTitle className="text-lg font-semibold">Report and Activity Signals</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             <div className="grid gap-3">
               {overview.reportPreviews.map((report: any) => (
-                <div className="rounded-2xl border border-border/70 bg-background p-4" key={report.key}>
+                <div className="rounded-[1.55rem] border border-border/70 bg-background/82 p-4" key={report.key}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold">{report.title}</div>
@@ -325,9 +323,9 @@ function DashboardPageContent({
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
+            <div className="rounded-[1.55rem] border border-border/70 bg-background/82 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                <TriangleAlert className="size-4 text-primary" />
+                <TriangleAlert className="size-4 text-muted-foreground" />
                 Recent activity
               </div>
               <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
@@ -335,7 +333,7 @@ function DashboardPageContent({
                   <span>No recent audit events yet.</span>
                 ) : (
                   overview.recentActivity.map((item: any) => (
-                    <div className="flex items-center justify-between gap-3" key={item._id}>
+                    <div className="flex items-center justify-between gap-3 rounded-[1rem] border border-border/60 bg-background/70 px-3 py-2" key={item._id}>
                       <span>{item.action.replaceAll(".", " ")}</span>
                       <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
@@ -362,7 +360,7 @@ function ConvexLoadErrorCard({ loadState }: { loadState: ConvexLoadState }) {
         title="Convex data is not loading"
         description="The dashboard rendered, but the live compliance data feed did not complete. This page now shows the actual integration state instead of an infinite skeleton."
       />
-      <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
+      <Card className="rounded-[1.9rem] border-0 shadow-sm ring-1 ring-border/80">
         <CardContent className="grid gap-4 p-6">
           <div className="rounded-2xl border border-orange-500/25 bg-orange-500/8 p-4 text-sm text-orange-100 dark:text-orange-200">
             {loadState.message ?? "The Convex connection did not finish."}
@@ -406,19 +404,14 @@ function OverviewMetric({
   label: string;
   value: string;
   detail: string;
-  tone: "purple" | "green" | "orange" | "red";
+  tone: "neutral" | "purple" | "green" | "orange" | "red";
 }) {
   return (
-    <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border/80">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
-            <div className="mt-3 text-3xl font-semibold tracking-tight">{value}</div>
-            <div className="mt-3 text-sm text-muted-foreground">{detail}</div>
-          </div>
-          <StatusBadge tone={tone}>{label === "Overall FC237 Score" ? "live" : "tracked"}</StatusBadge>
-        </div>
+    <Card className="min-h-[17.5rem] rounded-[1.9rem] border-0 shadow-sm ring-1 ring-border/80">
+      <CardContent className="flex h-full flex-col p-6">
+        <div className="max-w-[14rem] text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+        <div className="mt-7 text-5xl font-semibold tracking-[-0.04em] text-foreground">{value}</div>
+        <div className="mt-5 max-w-[16rem] text-[1.02rem] leading-8 text-muted-foreground">{detail}</div>
       </CardContent>
     </Card>
   );
@@ -426,7 +419,7 @@ function OverviewMetric({
 
 function OverviewLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background px-3 py-3 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-border/70 bg-background/78 px-4 py-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
@@ -446,3 +439,4 @@ function DashboardSkeleton() {
     </div>
   );
 }
+

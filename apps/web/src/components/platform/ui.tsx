@@ -11,7 +11,7 @@ export function StatusBadge({
 }) {
   const tones = {
     neutral:
-      "border border-border/70 bg-background/78 text-muted-foreground shadow-sm dark:bg-muted/45 dark:text-foreground/80",
+      "border border-border/70 bg-background/82 text-foreground/78 shadow-sm dark:bg-muted/55 dark:text-foreground/82",
     purple: "border border-primary/12 bg-primary/10 text-primary shadow-sm dark:border-primary/10 dark:bg-primary/8 dark:text-foreground/85",
     green:
       "border border-emerald-200/70 bg-emerald-50/90 text-emerald-700 shadow-sm dark:border-emerald-400/16 dark:bg-emerald-400/10 dark:text-emerald-200",
@@ -22,7 +22,7 @@ export function StatusBadge({
     red:
       "border border-rose-200/70 bg-rose-50/90 text-rose-700 shadow-sm dark:border-rose-400/16 dark:bg-rose-400/10 dark:text-rose-200",
   };
-  return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
+  return <span className={cn("inline-flex items-center rounded-full px-3 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
 }
 
 export function ProgressLine({ value, tone = "purple" }: { value: number; tone?: "purple" | "green" | "red" | "orange" }) {
