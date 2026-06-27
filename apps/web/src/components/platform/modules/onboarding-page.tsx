@@ -43,6 +43,24 @@ import { ProgressLine, StatusBadge } from "@/components/platform/ui";
 
 const draftStorageKey = "fc237.initial-questionnaire.draft.v2";
 
+function describeQuestionnaireError(error: unknown, fallback: string) {
+  const raw = error instanceof Error ? error.message : "";
+
+  if (/could not find public function/i.test(raw)) {
+    return "The FC237 questionnaire service was still syncing with Convex. Refresh the page and submit again.";
+  }
+
+  if (/not authenticated|authentication|jwt|token/i.test(raw)) {
+    return "Your secure session token is not ready yet. Refresh this page and sign in again if the problem continues.";
+  }
+
+  if (/fetch failed|network|Failed to fetch/i.test(raw)) {
+    return "FC237 could not reach the live backend just now. Check the active Convex connection and try again.";
+  }
+
+  return raw || fallback;
+}
+
 export function OnboardingPage() {
   const router = useRouter();
   const currentWorkspace = useQuery(api.organizations.getCurrent);
@@ -147,7 +165,7 @@ export function OnboardingPage() {
         description: "The dashboard, risks, controls, evidence requirements, and action plan are now populated from your answers.",
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "The questionnaire could not be submitted right now.";
+      const message = describeQuestionnaireError(error, "The questionnaire could not be submitted right now.");
       setErrorMessage(message);
       toast.error("We could not generate the roadmap", {
         description: message,
@@ -166,8 +184,9 @@ export function OnboardingPage() {
       });
       router.push("/reports");
     } catch (error) {
+      const message = describeQuestionnaireError(error, "The report could not be generated right now.");
       toast.error("Report generation failed", {
-        description: error instanceof Error ? error.message : "The report could not be generated right now.",
+        description: message,
       });
     } finally {
       setReportPending(false);
@@ -388,7 +407,7 @@ export function OnboardingPage() {
             {
               label: "Likely Gaps",
               value: `${detectedGaps.length}`,
-              detail: detectedGaps.length > 0 ? detectedGaps.slice(0, 2).join(" • ") : "No obvious high-priority gaps detected yet.",
+              detail: detectedGaps.length > 0 ? detectedGaps.slice(0, 2).join(" - ") : "No obvious high-priority gaps detected yet.",
               tone: detectedGaps.length > 0 ? "orange" : "green",
             },
             {
