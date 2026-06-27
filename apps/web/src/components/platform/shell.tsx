@@ -122,12 +122,12 @@ export default function PlatformShell({
   return (
     <div className="min-h-screen bg-transparent text-foreground">
       <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
-        <aside className="hidden border-r bg-background/84 backdrop-blur lg:block dark:bg-background/72">
+        <aside className="hidden border-r border-border/70 bg-sidebar/96 backdrop-blur-xl lg:block">
           <div className="flex h-full flex-col">
             <Link href="/dashboard" className="grid gap-3 px-6 py-6">
               <ProjectLogo className="max-w-[180px]" src={current?.organization?.branding?.logoUrl} />
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Compliance And Governance</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-foreground/82">AI Compliance And Governance</div>
                 <div className="mt-1 text-xs text-muted-foreground">Guided from initial questionnaire to continuous improvement.</div>
               </div>
             </Link>
@@ -151,9 +151,9 @@ export default function PlatformShell({
               ))}
             </nav>
 
-            <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/90 p-4 shadow-sm dark:bg-card/86">
+            <div className="m-4 rounded-[1.75rem] border border-border/70 bg-card/92 p-4 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.22)] dark:shadow-[0_24px_48px_-36px_rgba(0,0,0,0.68)]">
               <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                <div className="flex size-10 items-center justify-center rounded-full border border-border/80 bg-muted/70 text-sm font-semibold text-foreground">
                   {(current?.organization?.name ?? (loadState?.message ? "CV" : "FC")).slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
@@ -170,14 +170,14 @@ export default function PlatformShell({
         </aside>
 
         <div className="min-w-0">
-          <header className="sticky top-0 z-20 border-b bg-background/82 backdrop-blur dark:bg-background/68">
+          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/90 backdrop-blur-xl">
             <div className="flex min-h-20 flex-wrap items-center justify-between gap-4 px-4 py-4 lg:px-8">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 lg:hidden">
                   <ProjectLogo className="max-w-[120px]" src={current?.organization?.branding?.logoUrl} />
                 </div>
                 <p className="hidden text-sm text-muted-foreground sm:block">
-                  Guided flow: initial questionnaire, dashboard, inventory, risk treatment, controls, evidence, maturity, reports, and continuous improvement.
+                  Guided flow: questionnaire, dashboard, inventory, risk treatment, controls, evidence, reporting, and continuous improvement.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -221,7 +221,9 @@ export default function PlatformShell({
                   <Link
                     className={cn(
                       "inline-flex shrink-0 items-center gap-2 rounded-full px-3 py-2 text-xs font-medium",
-                      active ? "bg-primary/12 text-primary dark:bg-primary/16" : "text-muted-foreground hover:text-foreground",
+                      active
+                        ? "border border-border/80 bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-card/70 hover:text-foreground",
                     )}
                     href={item.href}
                     key={item.href}
@@ -264,10 +266,10 @@ function NavLink({
     <Link
       href={item.href}
       className={cn(
-        "grid grid-cols-[20px_1fr] items-center gap-3 rounded-2xl px-3 py-3 text-sm transition",
+        "grid grid-cols-[20px_1fr] items-center gap-3 rounded-[1.35rem] border border-transparent px-3 py-3 text-sm transition",
         active
-          ? "bg-primary/12 text-primary shadow-sm dark:bg-primary/16"
-          : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+          ? "border-border/80 bg-card text-foreground shadow-sm"
+          : "text-muted-foreground hover:border-border/50 hover:bg-card/70 hover:text-foreground",
       )}
     >
       <Icon className="size-4" />

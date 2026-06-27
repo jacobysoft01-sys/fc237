@@ -43,8 +43,8 @@ export default function Home() {
         </header>
         <section className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[1fr_520px]">
           <div className="max-w-3xl">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/12 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary shadow-sm">
-              <BrainCircuit />
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/88 px-3.5 py-2 text-sm font-medium text-foreground/84 shadow-sm">
+              <BrainCircuit className="text-primary dark:text-foreground" />
               Guided AI and cloud governance for SMEs
             </div>
             <h1 className="text-5xl font-semibold tracking-normal text-foreground lg:text-6xl">
@@ -75,7 +75,7 @@ export default function Home() {
               </Show>
             </div>
           </div>
-          <Card className="rounded-[2rem] border-0 bg-background/88 shadow-xl ring-1 ring-border/70">
+          <Card className="rounded-[2rem] border-0 bg-card/90 shadow-[0_28px_60px_-44px_rgba(15,23,42,0.28)] ring-1 ring-border/70 dark:shadow-[0_28px_60px_-40px_rgba(0,0,0,0.72)]">
             <CardContent className="grid gap-4 p-6">
               {[
                 ["Questionnaire-first start", "New users begin with the initial readiness questionnaire instead of landing on an empty dashboard."],
@@ -84,19 +84,19 @@ export default function Home() {
                 ["Guided assistant support", "Use OpenAI or Gemini guidance grounded in live FC237 records and Cameroon-aware governance instructions."],
               ].map(([title, body]) => (
                 <div className="grid grid-cols-[32px_1fr] gap-3" key={title}>
-                  <CheckCircle2 className="text-primary" />
+                  <CheckCircle2 className="text-primary dark:text-foreground" />
                   <div>
                     <h2 className="font-medium">{title}</h2>
                     <p className="text-sm text-muted-foreground">{body}</p>
                   </div>
                 </div>
               ))}
-              <div className="mt-2 rounded-[1.5rem] bg-primary p-5 text-primary-foreground shadow-lg shadow-primary/20">
+              <div className="mt-2 rounded-[1.5rem] border border-border/70 bg-muted/35 p-5 text-foreground shadow-sm">
                 <div className="flex items-center gap-2 text-sm font-medium">
-                  <Bot />
+                  <Bot className="text-primary dark:text-foreground" />
                   FC237 Assistant
                 </div>
-                <p className="mt-3 text-sm/6 opacity-90">
+                <p className="mt-3 text-sm/6 text-muted-foreground">
                   Ask about MFA, vendor reviews, incident response, AI systems, evidence, and maturity improvement with advice tailored to Cameroonian compliance and governance realities.
                 </p>
               </div>

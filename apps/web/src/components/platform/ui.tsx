@@ -11,16 +11,16 @@ export function StatusBadge({
 }) {
   const tones = {
     neutral:
-      "border border-border/70 bg-background/78 text-muted-foreground shadow-sm dark:bg-muted/35 dark:text-foreground/80",
-    purple: "border border-primary/15 bg-primary/12 text-primary shadow-sm dark:border-primary/25 dark:bg-primary/16",
+      "border border-border/70 bg-background/78 text-muted-foreground shadow-sm dark:bg-muted/45 dark:text-foreground/80",
+    purple: "border border-primary/12 bg-primary/10 text-primary shadow-sm dark:border-primary/10 dark:bg-primary/8 dark:text-foreground/85",
     green:
-      "border border-emerald-200/70 bg-emerald-50/90 text-emerald-700 shadow-sm dark:border-emerald-400/25 dark:bg-emerald-500/12 dark:text-emerald-300",
+      "border border-emerald-200/70 bg-emerald-50/90 text-emerald-700 shadow-sm dark:border-emerald-400/16 dark:bg-emerald-400/10 dark:text-emerald-200",
     yellow:
-      "border border-amber-200/70 bg-amber-50/90 text-amber-700 shadow-sm dark:border-amber-400/25 dark:bg-amber-500/12 dark:text-amber-300",
+      "border border-amber-200/70 bg-amber-50/90 text-amber-700 shadow-sm dark:border-amber-400/16 dark:bg-amber-400/10 dark:text-amber-200",
     orange:
-      "border border-orange-200/70 bg-orange-50/90 text-orange-700 shadow-sm dark:border-orange-400/25 dark:bg-orange-500/12 dark:text-orange-300",
+      "border border-orange-200/70 bg-orange-50/90 text-orange-700 shadow-sm dark:border-orange-400/16 dark:bg-orange-400/10 dark:text-orange-200",
     red:
-      "border border-rose-200/70 bg-rose-50/90 text-rose-700 shadow-sm dark:border-rose-400/25 dark:bg-rose-500/12 dark:text-rose-300",
+      "border border-rose-200/70 bg-rose-50/90 text-rose-700 shadow-sm dark:border-rose-400/16 dark:bg-rose-400/10 dark:text-rose-200",
   };
   return <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium", tones[tone])}>{children}</span>;
 }
@@ -55,10 +55,10 @@ export function MetricCard({
   sparkline?: number[];
 }) {
   const toneClasses = {
-    purple: "bg-primary/10 text-primary dark:bg-primary/16",
-    green: "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/12 dark:text-emerald-300",
-    red: "bg-red-50 text-red-600 dark:bg-red-500/12 dark:text-red-300",
-    orange: "bg-orange-50 text-orange-600 dark:bg-orange-500/12 dark:text-orange-300",
+    purple: "bg-primary/10 text-primary dark:bg-primary/8 dark:text-foreground",
+    green: "bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-200",
+    red: "bg-red-50 text-red-600 dark:bg-red-400/10 dark:text-red-200",
+    orange: "bg-orange-50 text-orange-600 dark:bg-orange-400/10 dark:text-orange-200",
   };
 
   return (
@@ -94,7 +94,7 @@ export function Sparkline({ values, tone = "purple" }: { values: number[]; tone?
     })
     .join(" ");
   const colors = {
-    purple: "stroke-primary",
+    purple: "stroke-primary dark:stroke-foreground",
     green: "stroke-emerald-500",
     red: "stroke-red-500",
     orange: "stroke-orange-500",

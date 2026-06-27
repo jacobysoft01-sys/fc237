@@ -12,7 +12,7 @@ import { PageHeader } from "@/components/platform/page-header";
 import { ProgressLine, StatusBadge } from "@/components/platform/ui";
 
 export const fieldClass =
-  "min-h-10 w-full rounded-2xl border border-input/85 bg-background/92 px-3.5 py-2 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20";
+  "min-h-10 w-full rounded-2xl border border-input/85 bg-background/92 px-3.5 py-2 text-sm shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 dark:bg-input/45";
 
 export function Field({
   label,
@@ -158,7 +158,7 @@ export function FilterButton({
     <button
       className={cn(
         "rounded-full border px-3 py-1.5 text-xs font-medium transition",
-        active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground",
+        active ? "border-border/80 bg-card text-foreground shadow-sm" : "border-border text-muted-foreground hover:bg-card/70 hover:text-foreground",
       )}
       onClick={onClick}
       type="button"
