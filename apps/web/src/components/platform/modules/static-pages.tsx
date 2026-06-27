@@ -25,6 +25,28 @@ import {
   resourcePlaybooks,
 } from "@/components/platform/modules/guide-data";
 import {
+  frameworkArchitectureLayers,
+  frameworkControlPriorities,
+  frameworkDocumentSummary,
+  frameworkEvidenceRegisterExamples,
+  frameworkIncidentGuidance,
+  frameworkMaintenanceActivities,
+  frameworkMaturityLevels,
+  frameworkOperatingModelSteps,
+  frameworkOutputs,
+  frameworkPillars,
+  frameworkReadinessBands,
+  frameworkRiskImpactScale,
+  frameworkRiskLevels,
+  frameworkRiskLikelihoodScale,
+  frameworkSharedResponsibilityAreas,
+  type FrameworkPillarKey,
+  type FrameworkToolkitKey,
+  frameworkValidationApproaches,
+  frameworkVendorCriteria,
+  frameworkVendorSuitabilityBands,
+} from "@/components/platform/modules/framework-documentation";
+import {
   EmptyState,
   Field,
   FilterButton,
@@ -374,6 +396,8 @@ export function FrameworkPage() {
   const commandProgress = overview?.score.overall ?? 0;
   const [selectedTrackKey, setSelectedTrackKey] = useState<GuideTrackKey>("founder");
   const [selectedStageKey, setSelectedStageKey] = useState<JourneyStageKey | null>(null);
+  const [selectedPillarKey, setSelectedPillarKey] = useState<FrameworkPillarKey>("governance");
+  const [selectedToolkitKey, setSelectedToolkitKey] = useState<FrameworkToolkitKey>("shared_responsibility");
 
   const pillarCards = overview
     ? platformSections.map((section) => {
@@ -492,63 +516,516 @@ export function FrameworkPage() {
       )
     : [];
   const focusedAction = overview?.nextActions[0];
+  const selectedPillar = frameworkPillars.find((pillar) => pillar.key === selectedPillarKey) ?? frameworkPillars[0];
+  const pillarLiveSignals: Record<
+    FrameworkPillarKey,
+    { detail: string; score: number; status: string; tone: "green" | "orange" | "red" | "neutral" }
+  > = {
+    governance: overview
+      ? {
+          score: averagePercent([domainScoreValue(overview, "ai_governance"), domainScoreValue(overview, "risk_management")]),
+          status: `${overview.riskRollup.highOrCritical} elevated risks`,
+          tone: overview.riskRollup.highOrCritical > 0 ? "orange" : "green",
+          detail: `${overview.organization?.riskOwner ?? "No risk owner assigned"} leads risk, and ${overview.riskRollup.withoutControls} risks still need control links.`,
+        }
+      : {
+          score: 0,
+          status: "Awaiting setup",
+          tone: "neutral",
+          detail: "Assign the risk owner, cyber focal point, and cloud approval rules to activate live governance mapping.",
+        },
+    compliance: overview
+      ? {
+          score: averagePercent([
+            domainScoreValue(overview, "vendor_readiness"),
+            domainScoreValue(overview, "evidence_coverage"),
+            domainScoreValue(overview, "policy_maturity"),
+          ]),
+          status: `${overview.vendorRollup.weak} weak vendors`,
+          tone: overview.vendorRollup.weak > 0 || overview.policyRollup.draftOrExpired > 0 ? "orange" : "green",
+          detail: `${overview.evidenceRollup.acceptedCoverage}% accepted evidence coverage and ${overview.policyRollup.missingPriorityPolicies.length} priority policy gaps are shaping the compliance posture.`,
+        }
+      : {
+          score: 0,
+          status: "Awaiting setup",
+          tone: "neutral",
+          detail: "Once vendor, evidence, and policy records exist, FC237 can map them directly to the compliance pillar.",
+        },
+    technical: overview
+      ? {
+          score: averagePercent([domainScoreValue(overview, "cloud_readiness"), domainScoreValue(overview, "incident_readiness")]),
+          status: `${overview.incidentRollup.unresolved} open incidents`,
+          tone: overview.incidentRollup.unresolved > 0 ? "orange" : "green",
+          detail: `${readinessAnswered}/${overview.readiness.questions.length} readiness questions are answered and ${controls.length} controls are available for technical coverage.`,
+        }
+      : {
+          score: 0,
+          status: "Awaiting setup",
+          tone: "neutral",
+          detail: "Readiness answers, controls, and incident records unlock the live technical-control view.",
+        },
+  };
+  const selectedPillarSignal = pillarLiveSignals[selectedPillar.key];
 
   return (
     <ModulePage
-      title="Framework Guide"
-      description="This is the live zero-to-hero journey for FC237. It explains what each phase means, why it matters, and which route moves the organization toward defensible compliance next."
+      title="FC237 Framework"
+      description="This section now implements the FC237 framework documentation directly: purpose, pillars, operating model, scoring, evidence, vendors, incidents, and the live workspace mapping that turns the document into action."
       icon={Shield}
       form={null}
       summary={
         <SummaryGrid
           items={[
             {
-              label: "Current Stage",
-              value: currentStage ? `${currentStage.step}` : "01",
-              detail: currentStage
-                ? `${currentStage.title}. ${currentStage.liveSignal}`
-                : "Complete onboarding so the journey can pick the right phase for the organization.",
-              tone: (currentStage?.tone ?? "orange") as "green" | "orange" | "red" | "neutral" | "purple" | "yellow",
+              label: "Framework Layers",
+              value: `${frameworkArchitectureLayers.length}`,
+              detail: "Context, framework core, operational tools, assistant implementation, and secure-cloud outcomes.",
+              tone: "green",
             },
             {
-              label: "Current Track",
-              value: currentTrack.label,
-              detail: currentTrack.focus,
+              label: "Core Pillars",
+              value: `${frameworkPillars.length}`,
+              detail: "Governance, Compliance, and Technical Controls form the FC237 core.",
               tone: "purple",
             },
             {
-              label: "Overall Score",
-              value: `${overview?.score.overall ?? 0}%`,
-              detail: overview?.assistantInsight.summary ?? "The journey starts showing live scores after onboarding and the first readiness run.",
-              tone: scoreTone(overview?.score.status ?? "neutral"),
+              label: "Operating Steps",
+              value: `${frameworkOperatingModelSteps.length}`,
+              detail: "The operating model runs from SME profile through review and continuous improvement.",
+              tone: "orange",
             },
             {
-              label: "Action Queue",
-              value: `${activeActions}`,
-              detail: focusedAction
-                ? `Top live action: ${focusedAction.title}.`
-                : "As weak domains appear, the journey will surface the next best action here.",
-              tone: activeActions > 0 ? "orange" : "green",
+              label: "Live FC237 Score",
+              value: overview ? `${overview.score.overall}%` : "Awaiting setup",
+              detail: overview
+                ? `${overview.score.status} posture with ${activeActions} active actions and ${overview.topRisks.length} urgent risks.`
+                : "The documentation is available immediately; live mapping appears after onboarding and the first readiness run.",
+              tone: overview ? scoreTone(overview.score.status) : "neutral",
             },
           ]}
         />
       }
     >
-      {!overview ? (
-        <SectionCard title="Guide unavailable">
-          <EmptyState
-            title="Complete onboarding first"
-            message="The framework guide becomes useful once the organization, readiness, controls, risks, and evidence records exist. Onboarding seeds that baseline workspace."
-            action={
-              <Link href="/onboarding">
-                <Button>Open onboarding</Button>
-              </Link>
-            }
-          />
-        </SectionCard>
-      ) : (
+      <SectionCard title="Framework Backbone" description="This is the document-backed foundation of FC237, translated into the web app's framework section.">
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-4">
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Framework Name</div>
+              <div className="mt-2 text-2xl font-semibold">{frameworkDocumentSummary.frameworkName}</div>
+              <p className="mt-3 text-sm text-muted-foreground">{frameworkDocumentSummary.frameworkSubtitle}</p>
+              <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/8 px-4 py-3 text-sm text-muted-foreground">
+                {frameworkDocumentSummary.assistantLayer}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Purpose</div>
+                <p className="mt-3 text-sm text-muted-foreground">{frameworkDocumentSummary.purpose}</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Scope</div>
+                <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                  {frameworkDocumentSummary.scope.map((item) => (
+                    <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Why FC237 Exists</div>
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                {frameworkDocumentSummary.rationale.map((item) => (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Expected Outcomes</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {frameworkDocumentSummary.outcomes.map((item) => (
+                  <StatusBadge key={item} tone="green">
+                    {item}
+                  </StatusBadge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {frameworkDocumentSummary.designPrinciples.map((principle) => (
+            <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={principle.title}>
+              <div className="text-sm font-semibold">{principle.title}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{principle.detail}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Architecture and Core Pillars" description="The framework architecture stays stable while the live workspace shows how far the organization has moved inside it.">
+        <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
+          <div className="grid gap-3">
+            {frameworkArchitectureLayers.map((layer) => (
+              <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={layer.step}>
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{layer.step}</div>
+                <div className="mt-2 text-base font-semibold">{layer.title}</div>
+                <p className="mt-2 text-sm text-muted-foreground">{layer.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {frameworkPillars.map((pillar) => (
+                <FilterButton active={pillar.key === selectedPillarKey} key={pillar.key} onClick={() => setSelectedPillarKey(pillar.key)}>
+                  {pillar.title}
+                </FilterButton>
+              ))}
+            </div>
+
+            <Card className="rounded-[1.75rem] border border-border/70 shadow-none">
+              <CardHeader className="gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-2xl">{selectedPillar.title}</CardTitle>
+                    <CardDescription className="mt-2">{selectedPillar.purpose}</CardDescription>
+                  </div>
+                  <StatusBadge tone={selectedPillarSignal.tone}>{selectedPillarSignal.status}</StatusBadge>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-5">
+                <div className="rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Problem addressed:</span> {selectedPillar.problem}
+                </div>
+                <div className="grid gap-4 lg:grid-cols-[1fr_220px]">
+                  <div>
+                    <div className="text-sm font-semibold">Objectives</div>
+                    <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                      {selectedPillar.objectives.map((objective) => (
+                        <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={objective}>
+                          {objective}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background p-4">
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Live Signal</div>
+                    <div className="mt-3 text-3xl font-semibold tracking-tight">{selectedPillarSignal.score}%</div>
+                    <p className="mt-2 text-sm text-muted-foreground">{selectedPillarSignal.detail}</p>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold">Framework components and evidence</div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {selectedPillar.components.map((component) => (
+                      <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={component.code}>
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{component.code}</div>
+                        <div className="mt-2 text-sm font-semibold">{component.name}</div>
+                        <p className="mt-2 text-sm text-muted-foreground">Evidence: {component.evidence}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
+                  <div>
+                    <div className="text-sm font-semibold">Minimum baseline</div>
+                    <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                      {selectedPillar.minimumBaseline.map((item) => (
+                        <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid gap-2 self-start">
+                    {selectedPillar.routes.map((route) => (
+                      <Link
+                        className="flex items-center justify-between rounded-xl border border-border/70 bg-background px-3 py-2 text-sm font-medium transition hover:border-primary/35 hover:bg-muted/25"
+                        href={route.href}
+                        key={`${selectedPillar.key}-${route.href}`}
+                      >
+                        <span>{route.label}</span>
+                        <ArrowUpRight className="size-4 text-muted-foreground" />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Ten-Step Operating Model" description="This is the exact implementation journey FC237 expects users to move through from first setup to continuous review.">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {frameworkOperatingModelSteps.map((step) => (
+            <Link
+              className="rounded-[1.5rem] border border-border/70 bg-background p-4 transition hover:border-primary/35 hover:bg-muted/20"
+              href={step.route}
+              key={step.step}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Step {step.step}</div>
+                  <div className="mt-2 text-base font-semibold">{step.title}</div>
+                </div>
+                <ArrowUpRight className="size-4 text-muted-foreground" />
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">{step.detail}</p>
+            </Link>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Scoring and Decision Logic" description="FC237 uses simple scoring logic so SMEs can decide what to treat now, what to monitor, and what level of maturity they are actually operating at.">
+        <div className="grid gap-5 xl:grid-cols-2">
+          <div className="grid gap-4">
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-sm font-semibold">Likelihood scale</div>
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                {frameworkRiskLikelihoodScale.map((item) => (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-sm font-semibold">Impact scale</div>
+              <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                {frameworkRiskImpactScale.map((item) => (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-sm font-semibold">Risk score bands</div>
+              <div className="mt-3 grid gap-2">
+                {frameworkRiskLevels.map((item) => (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm" key={item.band}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold">{item.label}</span>
+                      <StatusBadge tone={scoreTone(item.label)}>{item.band}</StatusBadge>
+                    </div>
+                    <div className="mt-2 text-muted-foreground">{item.action}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+                <div className="text-sm font-semibold">Maturity levels</div>
+                <div className="mt-3 grid gap-2">
+                  {frameworkMaturityLevels.map((item) => (
+                    <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm" key={item.level}>
+                      <div className="font-semibold">
+                        {item.level}: {item.label}
+                      </div>
+                      <div className="mt-1 text-muted-foreground">{item.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+                <div className="text-sm font-semibold">Readiness bands</div>
+                <div className="mt-3 grid gap-2">
+                  {frameworkReadinessBands.map((item) => (
+                    <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm" key={item.band}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold">{item.label}</span>
+                        <StatusBadge tone={scoreTone(item.label)}>{item.band}</StatusBadge>
+                      </div>
+                      <div className="mt-1 text-muted-foreground">{item.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {frameworkControlPriorities.map((item) => (
+            <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={item.label}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-semibold">{item.label}</div>
+                <StatusBadge tone={scoreTone(item.label)}>{item.label}</StatusBadge>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">{item.detail}</p>
+              <p className="mt-3 text-xs text-muted-foreground">{item.examples}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Operational Toolkits" description="These are the practical artifacts the PDF defines for shared responsibility, vendors, evidence, and incident handling.">
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterButton active={selectedToolkitKey === "shared_responsibility"} onClick={() => setSelectedToolkitKey("shared_responsibility")}>
+            Shared responsibility
+          </FilterButton>
+          <FilterButton active={selectedToolkitKey === "vendor_evaluation"} onClick={() => setSelectedToolkitKey("vendor_evaluation")}>
+            Vendor evaluation
+          </FilterButton>
+          <FilterButton active={selectedToolkitKey === "evidence_register"} onClick={() => setSelectedToolkitKey("evidence_register")}>
+            Evidence register
+          </FilterButton>
+          <FilterButton active={selectedToolkitKey === "incident_guidance"} onClick={() => setSelectedToolkitKey("incident_guidance")}>
+            Incident guidance
+          </FilterButton>
+        </div>
+
+        {selectedToolkitKey === "shared_responsibility" ? (
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {frameworkSharedResponsibilityAreas.map((item) => (
+              <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={item.area}>
+                <div className="text-sm font-semibold">{item.area}</div>
+                <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
+                    <span className="font-medium text-foreground">Provider:</span> {item.provider}
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
+                    <span className="font-medium text-foreground">SME:</span> {item.sme}
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
+                    <span className="font-medium text-foreground">Shared:</span> {item.shared}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {selectedToolkitKey === "vendor_evaluation" ? (
+          <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_320px]">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {frameworkVendorCriteria.map((criterion) => (
+                <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={criterion}>
+                  <div className="text-sm font-semibold">{criterion}</div>
+                  <p className="mt-2 text-sm text-muted-foreground">Score each criterion from 1 to 5 for every major cloud vendor.</p>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+              <div className="text-sm font-semibold">Vendor suitability bands</div>
+              <div className="mt-3 grid gap-2">
+                {frameworkVendorSuitabilityBands.map((item) => (
+                  <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3 text-sm" key={item.band}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-semibold">{item.label}</span>
+                      <StatusBadge tone={scoreTone(item.label)}>{item.band}</StatusBadge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground">
+                Low scores do not force automatic rejection, but they do require the SME to understand the exposure and define compensating controls.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedToolkitKey === "evidence_register" ? (
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {frameworkEvidenceRegisterExamples.map((item) => (
+              <div className="rounded-[1.35rem] border border-border/70 bg-background p-4" key={item.id}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm font-semibold">{item.id}</div>
+                  <StatusBadge tone="green">{item.control}</StatusBadge>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">Evidence: {item.evidence}</p>
+                <p className="mt-2 text-sm text-muted-foreground">Responsible person: {item.owner}</p>
+              </div>
+            ))}
+            <div className="rounded-[1.35rem] border border-dashed border-border px-4 py-4 text-sm text-muted-foreground md:col-span-2 xl:col-span-3">
+              Evidence should be reviewed periodically because outdated screenshots, logs, or checklists no longer prove that a control is still active.
+            </div>
+          </div>
+        ) : null}
+
+        {selectedToolkitKey === "incident_guidance" ? (
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            {frameworkIncidentGuidance.map((item) => (
+              <div className="rounded-[1.5rem] border border-border/70 bg-background p-5" key={item.title}>
+                <div className="text-base font-semibold">{item.title}</div>
+                <div className="mt-4">
+                  <div className="text-sm font-semibold">Recommended steps</div>
+                  <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                    {item.steps.map((step) => (
+                      <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={step}>
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="text-sm font-semibold">Evidence to keep</div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {item.evidence.map((evidenceItem) => (
+                      <StatusBadge key={evidenceItem} tone="orange">
+                        {evidenceItem}
+                      </StatusBadge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </SectionCard>
+
+      <SectionCard title="Outputs, Validation, and Maintenance" description="The documentation defines what the framework should produce, how it should be tested, and how it stays current over time.">
+        <div className="grid gap-4 xl:grid-cols-3">
+          <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+            <div className="text-sm font-semibold">Framework outputs</div>
+            <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+              {frameworkOutputs.map((item) => (
+                <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+            <div className="text-sm font-semibold">Validation approach</div>
+            <div className="mt-3 grid gap-3 text-sm text-muted-foreground">
+              {frameworkValidationApproaches.map((item) => (
+                <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-3" key={item.title}>
+                  <div className="font-medium text-foreground">{item.title}</div>
+                  <div className="mt-1">{item.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-[1.5rem] border border-border/70 bg-background p-5">
+            <div className="text-sm font-semibold">Maintenance checklist</div>
+            <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+              {frameworkMaintenanceActivities.map((item) => (
+                <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2" key={item}>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {overview ? (
         <>
-          <SectionCard title="Zero-to-Hero Journey" description="Choose a role lens, inspect the current stage, and let the app explain exactly what must happen next.">
+          <SectionCard title="Live FC237 Journey" description="Choose a role lens, inspect the current stage, and let the app explain exactly what must happen next.">
             <div className="flex flex-wrap items-center gap-2">
               {guideTracks.map((track) => (
                 <FilterButton active={track.key === selectedTrackKey} key={track.key} onClick={() => setSelectedTrackKey(track.key)}>
@@ -595,9 +1072,7 @@ export function FrameworkPage() {
                   <CardHeader className="gap-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          Stage {currentStage.step}
-                        </div>
+                        <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Stage {currentStage.step}</div>
                         <CardTitle className="mt-2 text-2xl">{currentStage.title}</CardTitle>
                         <CardDescription className="mt-2">{currentStage.description}</CardDescription>
                       </div>
@@ -711,7 +1186,7 @@ export function FrameworkPage() {
             ) : null}
           </SectionCard>
 
-          <SectionCard title="Operating Model Map" description="Each section below is grounded in live FC237 records, not placeholder guide text.">
+          <SectionCard title="Live Workspace Alignment" description="Each section below is grounded in live FC237 records and shows how the documentation maps onto the running product.">
             <div className="grid gap-4 xl:grid-cols-2">
               {pillarCards.map((card: any) => (
                 <Card className="rounded-2xl border border-border/70 shadow-none" key={card.key}>
@@ -762,7 +1237,7 @@ export function FrameworkPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Readiness Question Bank" description="These seven questions now drive stored assessment responses, domain scoring, and the generated action queue.">
+          <SectionCard title="Readiness Question Bank" description="These stored readiness questions are the live scoring instrument behind the FC237 readiness classification.">
             <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
               {overview.readiness.questions.map((question: any) => (
                 <div className="rounded-2xl border border-border/70 bg-background p-4" key={question.key}>
@@ -819,6 +1294,18 @@ export function FrameworkPage() {
             />
           </SectionCard>
         </>
+      ) : (
+        <SectionCard title="Activate live workspace mapping">
+          <EmptyState
+            title="Framework documentation is ready"
+            message="Complete onboarding and submit the first readiness assessment to unlock the live journey, workspace alignment cards, and action-driven guidance that sit on top of this documentation."
+            action={
+              <Link href="/onboarding">
+                <Button>Open onboarding</Button>
+              </Link>
+            }
+          />
+        </SectionCard>
       )}
     </ModulePage>
   );
