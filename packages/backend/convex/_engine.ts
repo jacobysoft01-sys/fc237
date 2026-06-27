@@ -115,6 +115,15 @@ function findPoliciesByType(policies: Doc<"policies">[]) {
 function buildCloudReadiness(snapshot: WorkspaceSnapshot, scores: Record<string, number>): DomainScore {
   const readinessQuestions = ["cloud_inventory", "mfa", "backup", "access_review"];
   const assessmentScore = average(readinessQuestions.map((key) => normalizeFivePoint(scores[key])));
+  if (snapshot.cloudServices.length === 0) {
+    return {
+      key: "cloud_readiness",
+      label: "Cloud Readiness",
+      score: assessmentScore,
+      status: scoreBand(assessmentScore),
+      detail: "No cloud services are registered yet, so this score is currently driven by the stored readiness answers.",
+    };
+  }
   const approvedCoverage = percent(
     snapshot.cloudServices.filter((service) => service.approved).length,
     snapshot.cloudServices.length,
@@ -135,6 +144,15 @@ function buildCloudReadiness(snapshot: WorkspaceSnapshot, scores: Record<string,
 
 function buildAiGovernance(snapshot: WorkspaceSnapshot): DomainScore {
   const total = snapshot.aiSystems.length;
+  if (total === 0) {
+    return {
+      key: "ai_governance",
+      label: "AI Governance",
+      score: 100,
+      status: scoreBand(100),
+      detail: "No AI systems are registered, so current AI exposure is limited until new AI tools are introduced.",
+    };
+  }
   const linkedRiskIds = new Set(snapshot.risks.filter((risk) => risk.relatedAiSystemId).map((risk) => String(risk.relatedAiSystemId)));
   const completeness = percent(
     snapshot.aiSystems.reduce((count, system) => {
@@ -167,13 +185,13 @@ function buildAiGovernance(snapshot: WorkspaceSnapshot): DomainScore {
     ).length,
     total,
   );
-  const score = total === 0 ? 0 : average([completeness, riskCoverage, controlCoverage, approvalCoverage, vendorCoverage]);
+  const score = average([completeness, riskCoverage, controlCoverage, approvalCoverage, vendorCoverage]);
   return {
     key: "ai_governance",
     label: "AI Governance",
     score,
     status: scoreBand(score),
-    detail: total === 0 ? "No AI systems registered yet." : `${total} systems tracked with ${approvalCoverage}% approval coverage.`,
+    detail: `${total} systems tracked with ${approvalCoverage}% approval coverage.`,
   };
 }
 

@@ -217,37 +217,37 @@ export const frameworkPillars = [
 export const frameworkOperatingModelSteps = [
   {
     step: "01",
-    title: "Create SME Profile",
+    title: "Complete Initial Questionnaire",
     detail:
-      "Record the enterprise name, sector, location, employee count, ICT support, assigned risk owner, cyber focal point, cloud usage, and business-critical services.",
-    route: "/settings" as Route,
+      "Start with the guided readiness questionnaire so FC237 can capture organization context, cloud habits, AI use, data handling, vendor posture, and evidence maturity.",
+    route: "/onboarding" as Route,
   },
   {
     step: "02",
-    title: "Build Cloud-Service Inventory",
+    title: "Review Dashboard",
     detail:
-      "List service name, provider, service type, business purpose, users with access, data stored, account owner, MFA status, backup status, terms, and approval status.",
-    route: "/ai-systems" as Route,
+      "Read the overall FC237 score, domain scores, urgent risks, evidence gaps, and recommended next actions generated from real stored records.",
+    route: "/dashboard" as Route,
   },
   {
     step: "03",
-    title: "Classify Data",
+    title: "Build Cloud-Service Inventory",
     detail:
-      "Identify the data stored or processed in each cloud service and classify it as public, internal, confidential, personal, or critical.",
-    route: "/evidence" as Route,
+      "List service name, provider, service type, purpose, owner, data context, approval status, and any linked vendor relationship for each important cloud service.",
+    route: "/inventory" as Route,
   },
   {
     step: "04",
-    title: "Assess Risk",
+    title: "Register AI Systems and Vendors",
     detail:
-      "Identify service or data risks such as hacked accounts, unauthorized access, data leakage, phishing, ransomware, former employee access, service outage, or non-compliance.",
-    route: "/risks" as Route,
+      "Capture AI tools and related vendors before deeper treatment so the platform knows where customer data, business decisions, and supplier dependencies live.",
+    route: "/ai-systems" as Route,
   },
   {
     step: "05",
-    title: "Score Risk",
+    title: "Assess and Score Risk",
     detail:
-      "Use FC237's likelihood multiplied by impact model and map the result into Low, Moderate, High, or Critical action levels.",
+      "Identify service, vendor, AI, and governance risks, then score them with FC237's likelihood multiplied by impact model.",
     route: "/risks" as Route,
   },
   {
@@ -259,17 +259,17 @@ export const frameworkOperatingModelSteps = [
   },
   {
     step: "07",
-    title: "Assess Maturity",
+    title: "Record Evidence",
     detail:
-      "Determine whether the organization is still ad hoc, basic, defined, managed, or optimized across governance and operations.",
-    route: "/maturity" as Route,
+      "Capture proof for implemented controls such as MFA, access review, backups, vendor review, incident handling, policies, and data classification.",
+    route: "/evidence" as Route,
   },
   {
     step: "08",
-    title: "Record Evidence",
+    title: "Assess Maturity",
     detail:
-      "Capture proof for implemented controls such as MFA, access review, backup, vendor review, offboarding, incident handling, and classification.",
-    route: "/evidence" as Route,
+      "Review whether governance practices are still ad hoc, basic, defined, managed, or optimized across the FC237 domains.",
+    route: "/maturity" as Route,
   },
   {
     step: "09",
@@ -280,9 +280,9 @@ export const frameworkOperatingModelSteps = [
   },
   {
     step: "10",
-    title: "Review and Improve",
+    title: "Review Action Plan and Improve",
     detail:
-      "Repeat inventory updates, access review, backup tests, vendor review, incident review, maturity reassessment, and the full FC237 review on the recommended cycle.",
+      "Repeat inventory updates, risk review, control follow-up, evidence refresh, incident review, maturity reassessment, and the full FC237 cycle on the chosen cadence.",
     route: "/action-plan" as Route,
   },
 ] as const;

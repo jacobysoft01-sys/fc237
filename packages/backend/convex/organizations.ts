@@ -94,7 +94,7 @@ export const create = mutation({
         shortName: args.branding?.shortName ?? args.name,
         primaryColor: args.branding?.primaryColor ?? "#0f766e",
         accentColor: args.branding?.accentColor ?? "#f59e0b",
-        logoUrl: args.branding?.logoUrl,
+        logoUrl: args.branding?.logoUrl ?? "/fc237-logo.png",
         reportHeader: args.branding?.reportHeader,
         reportFooter: args.branding?.reportFooter,
         signatureName: args.branding?.signatureName,

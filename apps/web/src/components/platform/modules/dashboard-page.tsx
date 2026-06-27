@@ -79,16 +79,16 @@ function DashboardPageContent({
       <div className="mx-auto max-w-3xl">
         <PageHeader
           icon={Building2}
-          title="Set up the FC237 workspace"
-          description="Create the organization profile first so the command center can seed linked records and score the web app from real data."
+          title="Start with the FC237 questionnaire"
+          description="Answer the initial guided questionnaire first so the command center can build the organization baseline, score the platform, and generate the first roadmap from real data."
         />
         <Card className="rounded-2xl border-0 shadow-sm ring-1 ring-border">
           <CardContent className="flex flex-col gap-4 p-6">
             <p className="text-sm text-muted-foreground">
-              Onboarding creates the expanded organization profile, baseline controls, a seeded readiness assessment, linked risks, vendor records, evidence, and the initial action plan.
+              The questionnaire creates the organization profile, cloud and AI inventory, readiness baseline, linked risks, mapped controls, vendor records, evidence requirements, policies, and the first action plan.
             </p>
             <Link className={buttonVariants()} href="/onboarding">
-              Start organization setup
+              Start Readiness Assessment
               <ArrowRight data-icon="inline-end" />
             </Link>
           </CardContent>

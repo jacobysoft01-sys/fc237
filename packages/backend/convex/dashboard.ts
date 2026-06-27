@@ -15,17 +15,17 @@ export const getOverview = query({
       {
         key: "compliance_readiness_summary",
         title: "Compliance Readiness Summary",
-        summary: "Run onboarding and the first readiness cycle to populate the production report.",
+        summary: "Complete the initial questionnaire to generate the first production-ready readiness report.",
       },
       {
         key: "risk_register_preview",
         title: "Risk Register Preview",
-        summary: "Score risks after onboarding to preview the register report.",
+        summary: "The questionnaire-generated risks will appear here after the baseline roadmap is created.",
       },
       {
         key: "action_plan_preview",
         title: "Action Plan Preview",
-        summary: "Generated actions appear here after assessments, risks, controls, or policy gaps are stored.",
+        summary: "Generated actions appear here after the baseline questionnaire creates the first roadmap.",
       },
     ];
 
@@ -90,20 +90,20 @@ export const getOverview = query({
             score: 1,
           })),
           nextLevelActions: [
-            "Create the organization profile.",
-            "Select at least one framework.",
-            "Run the readiness assessment to create the first baseline.",
+            "Answer the initial organization questionnaire.",
+            "Generate the first FC237 roadmap.",
+            "Review the first action plan and readiness report.",
           ],
           label: maturityLabel(1),
         },
         assistantInsight: {
           mode: "Ask",
-          title: "Start with onboarding",
-          summary: "Create the organization profile and run the first readiness cycle to unlock grounded guidance.",
+          title: "Start with the guided questionnaire",
+          summary: "Answer the initial FC237 questions first so the dashboard, risks, controls, evidence, and action plan are grounded in real organizational context.",
           recommendedActions: [
-            "Complete onboarding.",
-            "Run the readiness assessment.",
-            "Link the first controls and evidence records.",
+            "Complete the initial questionnaire.",
+            "Generate the first roadmap.",
+            "Review the first controls, risks, and evidence prompts.",
           ],
         },
         reportPreviews: emptyReportPreviews,

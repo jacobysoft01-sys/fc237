@@ -12,12 +12,12 @@ import { EmptyState, ModulePage, SectionCard, SummaryGrid } from "@/components/p
 import { StatusBadge } from "@/components/platform/ui";
 
 const shortcuts = [
-  "Run a readiness assessment summary for me.",
+  "Guide me through the FC237 workflow from questionnaire to report.",
+  "What should I review on the dashboard first?",
+  "Which inventory records should I update next?",
   "What risk should I treat first?",
   "Which evidence gaps matter most today?",
   "How ready are we for an incident?",
-  "Can I generate the compliance report now?",
-  "Which policy should I draft or approve next?",
 ];
 
 type AssistantUiError = {
@@ -35,10 +35,10 @@ function formatAssistantUiError(submissionError: unknown): AssistantUiError {
     };
   }
 
-  if (message.includes("Complete onboarding")) {
+  if (message.includes("Complete the initial questionnaire")) {
     return {
-      title: "Complete onboarding first",
-      detail: "The assistant needs a baseline assessment and dashboard context before it can guide the next compliance step.",
+      title: "Complete the first assessment first",
+      detail: "The assistant needs the initial questionnaire baseline and dashboard context before it can guide the next compliance step.",
     };
   }
 
@@ -92,7 +92,7 @@ export function AssistantPage() {
             {
               label: "Mode",
               value: dashboard && !dashboard.needsOnboarding ? dashboard.assistantInsight.mode : "Ask",
-              detail: dashboard && !dashboard.needsOnboarding ? dashboard.assistantInsight.summary : "Complete onboarding to activate context-aware guidance.",
+              detail: dashboard && !dashboard.needsOnboarding ? dashboard.assistantInsight.summary : "Complete the initial questionnaire to activate context-aware guidance.",
               tone: "purple",
             },
             {
@@ -146,7 +146,7 @@ export function AssistantPage() {
             {messages.length === 0 ? (
               <div className="grid gap-4 rounded-2xl bg-muted/30 p-4">
                 <p className="text-sm text-muted-foreground">
-                  Use the assistant when you want the next best action explained through current dashboard scores, open actions, risks, evidence, incidents, reports, or policy state, with Cameroon-aware compliance framing.
+                  Use the assistant when you want the FC237 journey explained from zero, or when you want the next best action translated through current dashboard scores, inventory, risks, evidence, incidents, reports, or policy state.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {shortcuts.map((shortcut) => (
@@ -224,7 +224,7 @@ export function AssistantPage() {
             >
               <Input
                 disabled={pending}
-                placeholder="Ask about readiness, risk, evidence, incidents, reports, or policy work..."
+                placeholder="Ask about the FC237 journey, inventory, risk, evidence, incidents, reports, or policy work..."
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
               />

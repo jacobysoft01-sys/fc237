@@ -404,7 +404,7 @@ export const sendMessage = action({
 
     const overview = await ctx.runQuery(api.dashboard.getOverview, {});
     if (!overview || overview.needsOnboarding) {
-      throw new Error("Complete onboarding so the assistant can work from your live compliance data.");
+      throw new Error("Complete the initial questionnaire so the assistant can work from your live compliance data.");
     }
 
     const reportPreview = await ctx.runQuery(api.reports.getPreview, {});

@@ -57,7 +57,7 @@ export function ControlsPage() {
         {controls.length === 0 ? (
           <EmptyState
             title="No controls loaded"
-            message="Controls are seeded during onboarding. If this space is empty, start by creating the organization profile so the baseline library can be generated."
+            message="Controls are generated from the initial questionnaire. If this space is empty, start by completing the baseline questionnaire so FC237 can build the first control library from real answers."
           />
         ) : (
           <div className="grid gap-4">

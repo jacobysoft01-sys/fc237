@@ -171,7 +171,7 @@ export function PoliciesPage() {
         {policies.length === 0 ? (
           <EmptyState
             title="No policies registered"
-            message="Create the first priority policy type, or use the seeded workspace to review draft and approved records."
+            message="Create the first priority policy type, or use the questionnaire-generated baseline to review draft and approved records."
           />
         ) : (
           <div className="grid gap-4">

@@ -10,6 +10,7 @@
 
 import type * as _engine from "../_engine.js";
 import type * as _phase1 from "../_phase1.js";
+import type * as _questionnaire from "../_questionnaire.js";
 import type * as _shared from "../_shared.js";
 import type * as aiSystems from "../aiSystems.js";
 import type * as assessments from "../assessments.js";
@@ -28,6 +29,7 @@ import type * as maturity from "../maturity.js";
 import type * as organizations from "../organizations.js";
 import type * as policies from "../policies.js";
 import type * as privateData from "../privateData.js";
+import type * as questionnaire from "../questionnaire.js";
 import type * as recommendations from "../recommendations.js";
 import type * as reports from "../reports.js";
 import type * as risks from "../risks.js";
@@ -44,6 +46,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   _engine: typeof _engine;
   _phase1: typeof _phase1;
+  _questionnaire: typeof _questionnaire;
   _shared: typeof _shared;
   aiSystems: typeof aiSystems;
   assessments: typeof assessments;
@@ -62,6 +65,7 @@ declare const fullApi: ApiFromModules<{
   organizations: typeof organizations;
   policies: typeof policies;
   privateData: typeof privateData;
+  questionnaire: typeof questionnaire;
   recommendations: typeof recommendations;
   reports: typeof reports;
   risks: typeof risks;

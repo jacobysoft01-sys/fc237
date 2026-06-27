@@ -3,9 +3,12 @@
 import { Show, SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button, buttonVariants } from "@FC237/ui/components/button";
 import { Card, CardContent } from "@FC237/ui/components/card";
-import { ArrowRight, Bot, BrainCircuit, CheckCircle2, Shield } from "lucide-react";
+import { ArrowRight, Bot, BrainCircuit, CheckCircle2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+
+import { ProjectLogo } from "@/components/project-logo";
+import { FC237_PRODUCT_TAGLINE, FC237_WORKFLOW_SEQUENCE } from "@/lib/branding";
 
 export default function Home() {
   return (
@@ -13,12 +16,9 @@ export default function Home() {
       <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8">
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-[1.35rem] bg-primary text-primary-foreground shadow-md shadow-primary/20">
-              <Shield />
-            </div>
             <div>
-              <div className="text-2xl font-semibold">FC237</div>
-              <div className="text-xs text-muted-foreground">Compliance Assistant</div>
+              <ProjectLogo className="max-w-[150px]" />
+              <div className="mt-1 text-xs text-muted-foreground">{FC237_PRODUCT_TAGLINE}</div>
             </div>
           </Link>
           <div className="flex items-center gap-2">
@@ -30,7 +30,7 @@ export default function Home() {
                 <Button variant="ghost">Sign in</Button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <Button>Start assessment</Button>
+                <Button>Start Readiness Assessment</Button>
               </SignUpButton>
             </Show>
             <Show when="signed-in">
@@ -45,19 +45,22 @@ export default function Home() {
           <div className="max-w-3xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/12 bg-primary/10 px-3.5 py-2 text-sm font-medium text-primary shadow-sm">
               <BrainCircuit />
-              Hybrid AI and cloud governance for SMEs
+              Guided AI and cloud governance for SMEs
             </div>
             <h1 className="text-5xl font-semibold tracking-normal text-foreground lg:text-6xl">
-              FC237 turns cybersecurity governance into guided daily action.
+              FC237 turns compliance from a blank start into a guided improvement journey.
             </h1>
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-              Assess cloud readiness, register AI systems, score risks, collect evidence, evaluate vendors, and generate compliance-ready reports from one executive command center.
+              Start with the readiness questionnaire, review the dashboard, build inventory, treat risks, implement controls, collect evidence, measure maturity, and generate report-ready compliance output from one command center.
             </p>
+            <div className="mt-5 rounded-[1.5rem] border border-border/70 bg-background/70 px-4 py-4 text-sm text-muted-foreground shadow-sm">
+              <span className="font-medium text-foreground">FC237 workflow:</span> {FC237_WORKFLOW_SEQUENCE}
+            </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Show when="signed-out">
                 <SignUpButton mode="modal">
                   <Button size="lg">
-                    Create your account
+                    Start Readiness Assessment
                     <ArrowRight data-icon="inline-end" />
                   </Button>
                 </SignUpButton>
@@ -78,10 +81,10 @@ export default function Home() {
           <Card className="rounded-[2rem] border-0 bg-background/88 shadow-xl ring-1 ring-border/70">
             <CardContent className="grid gap-4 p-6">
               {[
-                ["Executive command center", "Compliance score, evidence coverage, open findings, and high-risk AI systems."],
-                ["Guided FC237 assistant", "OpenAI or Gemini guidance grounded in live FC237 records and Cameroon-aware governance instructions."],
-                ["Evidence Vault", "Link screenshots, access reviews, policies, incident logs, and reports to controls."],
-                ["Framework mapping", "Track FC237 progress against ISO 27001, NIST AI RMF, and EU AI Act."],
+                ["Questionnaire-first start", "New users begin with the initial readiness questionnaire instead of landing on an empty dashboard."],
+                ["Executive command center", "Review the overall score, domain signals, urgent risks, evidence coverage, and next actions in one place."],
+                ["Inventory to evidence workflow", "Move from cloud and AI inventory into risk, controls, vendor review, evidence, maturity, and reporting."],
+                ["Guided assistant support", "Use OpenAI or Gemini guidance grounded in live FC237 records and Cameroon-aware governance instructions."],
               ].map(([title, body]) => (
                 <div className="grid grid-cols-[32px_1fr] gap-3" key={title}>
                   <CheckCircle2 className="text-primary" />

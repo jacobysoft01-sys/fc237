@@ -1,6 +1,7 @@
 export { ActionPlanPage } from "@/components/platform/modules/action-plan-page";
 export { AiSystemsPage } from "@/components/platform/modules/ai-systems-page";
 export { AssistantPage } from "@/components/platform/modules/assistant-page";
+export { CloudInventoryPage } from "@/components/platform/modules/cloud-inventory-page";
 export { ControlsPage } from "@/components/platform/modules/controls-page";
 export { EvidencePage } from "@/components/platform/modules/evidence-page";
 export { IncidentsPage } from "@/components/platform/modules/incidents-page";

@@ -4,10 +4,11 @@ import { api } from "@FC237/backend/convex/_generated/api";
 import { Button } from "@FC237/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@FC237/ui/components/card";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowUpRight, BellRing, Download, Library, Settings, Shield, Users } from "lucide-react";
+import { ArrowUpRight, Download, Library, Settings, Shield, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { ProjectLogo } from "@/components/project-logo";
 import {
   complianceJourneyStages,
   cloudUsageOptions,
@@ -156,33 +157,45 @@ function resolveRecommendedJourneyStageKey({
   overview,
   profileCompletion,
   selectedFrameworks,
+  cloudServices,
   aiSystems,
   vendors,
+  risks,
+  controls,
+  policies,
   readinessAnswered,
   totalQuestions,
   missingEvidenceSlots,
+  maturityCoverage,
 }: {
   overview: any;
   profileCompletion: number;
   selectedFrameworks: string[];
+  cloudServices: any[];
   aiSystems: any[];
   vendors: any[];
+  risks: any[];
+  controls: any[];
+  policies: any[];
   readinessAnswered: number;
   totalQuestions: number;
   missingEvidenceSlots: number;
+  maturityCoverage: number;
 }): JourneyStageKey {
-  if (!overview) return "setup";
-  if (profileCompletion < 70 || selectedFrameworks.length === 0) return "setup";
-  if (aiSystems.length === 0 || vendors.length === 0) return "inventory";
-  if (readinessAnswered < totalQuestions || overview.readiness.latestAssessmentScore === 0) return "baseline";
+  if (!overview || readinessAnswered < totalQuestions || overview.readiness.latestAssessmentScore === 0) {
+    return "questionnaire";
+  }
+  if (profileCompletion < 70 || selectedFrameworks.length === 0) return "dashboard";
+  if (cloudServices.length === 0 || aiSystems.length === 0 || vendors.length === 0) return "inventory";
+  if (risks.length === 0 || domainScoreValue(overview, "risk_management") < 60 || overview.riskRollup.withoutControls > 0) {
+    return "risk";
+  }
   if (
-    domainScoreValue(overview, "risk_management") < 60 ||
-    domainScoreValue(overview, "ai_governance") < 60 ||
-    overview.riskRollup.withoutControls > 0 ||
+    controls.length === 0 ||
     overview.policyRollup.draftOrExpired > 0 ||
     (overview.policyRollup.missingPriorityPolicies?.length ?? 0) > 0
   ) {
-    return "governance";
+    return "controls";
   }
   if (
     missingEvidenceSlots > 0 ||
@@ -190,9 +203,11 @@ function resolveRecommendedJourneyStageKey({
     overview.vendorRollup.outstandingGaps > 0 ||
     overview.incidentRollup.unresolved > 0
   ) {
-    return "assurance";
+    return "evidence";
   }
-  return "reporting";
+  if (maturityCoverage < 70) return "maturity";
+  if ((overview.reports?.length ?? 0) === 0) return "reports";
+  return "improvement";
 }
 
 function buildJourneyStageCards({
@@ -200,23 +215,27 @@ function buildJourneyStageCards({
   actionPlan,
   profileCompletion,
   selectedFrameworks,
+  cloudServices,
   controls,
   evidence,
   vendors,
   policies,
   aiSystems,
   incidents,
+  risks,
 }: {
   overview: any;
   actionPlan: any;
   profileCompletion: number;
   selectedFrameworks: string[];
+  cloudServices: any[];
   controls: any[];
   evidence: any[];
   vendors: any[];
   policies: any[];
   aiSystems: any[];
   incidents: any[];
+  risks: any[];
 }) {
   const readinessQuestions = overview?.readiness.questions ?? [];
   const readinessAnswered = readinessQuestions.filter((question: any) => question.score > 0).length;
@@ -224,6 +243,15 @@ function buildJourneyStageCards({
   const acceptedEvidenceSlots = overview?.evidenceRollup.acceptedSlots ?? 0;
   const missingEvidenceSlots = Math.max(requiredEvidenceSlots - acceptedEvidenceSlots, 0);
   const criticalActions = actionPlan?.summary.critical ?? 0;
+  const activeActions = actionPlan?.summary.active ?? 0;
+  const cloudOwnerCoverage = ratioPercent(
+    cloudServices.filter((service: any) => hasTextValue(service.owner)).length,
+    cloudServices.length,
+  );
+  const cloudApprovalCoverage = ratioPercent(
+    cloudServices.filter((service: any) => service.approved).length,
+    cloudServices.length,
+  );
   const aiOwnerCoverage = ratioPercent(
     aiSystems.filter(
       (system: any) =>
@@ -240,78 +268,134 @@ function buildJourneyStageCards({
   const maturityCoverage = averagePercent(
     (overview?.maturitySupport?.domains ?? []).map((domain: any) => domain.score * 20),
   );
+  const riskOwnerCoverage = ratioPercent(risks.filter((risk: any) => hasTextValue(risk.owner)).length, risks.length);
+  const riskTreatmentCoverage = ratioPercent(
+    risks.filter((risk: any) => hasTextValue(risk.treatmentOption ?? risk.treatmentStatus)).length,
+    risks.length,
+  );
+  const riskDueCoverage = ratioPercent(risks.filter((risk: any) => hasTextValue(risk.dueDate)).length, risks.length);
+  const riskControlCoverage = ratioPercent(
+    risks.filter((risk: any) => (risk.relatedControlIds?.length ?? 0) > 0).length,
+    risks.length,
+  );
+  const controlImplementedCoverage = ratioPercent(
+    controls.filter((control: any) =>
+      ["implemented", "evidence_submitted", "evidence submitted", "verified"].includes(
+        String(control.implementationStatus ?? "").toLowerCase(),
+      ),
+    ).length,
+    controls.length,
+  );
+  const policyApprovedCoverage = ratioPercent(
+    policies.filter((policy: any) => String(policy.status ?? "").toLowerCase() === "approved").length,
+    policies.length,
+  );
   const recommendedKey = resolveRecommendedJourneyStageKey({
     overview,
     profileCompletion,
     selectedFrameworks,
+    cloudServices,
     aiSystems,
     vendors,
+    risks,
+    controls,
+    policies,
     readinessAnswered,
     totalQuestions: readinessQuestions.length,
     missingEvidenceSlots,
+    maturityCoverage,
   });
 
   const rawCards = complianceJourneyStages.map((stage) => {
     switch (stage.key) {
-      case "setup":
+      case "questionnaire":
         return {
           ...stage,
-          progress: profileCompletion,
-          metric: `${profileCompletion}% profile completion`,
-          liveSignal: `${selectedFrameworks.length} frameworks selected and the organization brief is ${profileCompletion}% complete.`,
+          progress: overview ? 100 : ratioPercent(readinessAnswered, readinessQuestions.length),
+          metric: overview ? `${overview.readiness.latestAssessmentScore}% baseline readiness score` : "No baseline yet",
+          liveSignal: overview
+            ? `${readinessAnswered}/${readinessQuestions.length} readiness answers now feed the dashboard and the initial roadmap.`
+            : "The baseline questionnaire has not been completed yet.",
           blockers: [
-            !hasTextValue(overview.organization.riskOwner) ? "Assign a risk owner so action plans and reports have clear accountability." : null,
-            !hasTextValue(overview.organization.cyberFocalPoint) ? "Add a cyber focal point to anchor operational follow-up." : null,
-            selectedFrameworks.length === 0 ? "Choose at least one framework to shape reporting language and policy expectations." : null,
-            !hasTextValue(overview.organization.contacts?.primaryEmail) ? "Set a primary contact so notifications and digests have a real destination." : null,
+            !overview ? "Run the initial questionnaire first so FC237 can create the first baseline." : null,
+            readinessAnswered < readinessQuestions.length ? `${readinessQuestions.length - readinessAnswered} readiness answers are still missing from the baseline.` : null,
+            !hasTextValue(overview?.organization?.contacts?.primaryEmail) ? "Add a primary contact so reminders and reports have a real destination." : null,
+          ].filter(Boolean) as string[],
+        };
+      case "dashboard":
+        return {
+          ...stage,
+          progress: averagePercent([overview.score.overall, overview.domainScores.length > 0 ? 100 : 0]),
+          metric: `${overview.score.overall}% overall FC237 score`,
+          liveSignal: `${overview.domainScores.length} domain scores, ${overview.topRisks.length} urgent risks, and ${overview.nextActions.length} recommended next actions are visible right now.`,
+          blockers: [
+            profileCompletion < 70 ? "Complete the organization profile so the dashboard story is more credible." : null,
+            selectedFrameworks.length === 0 ? "Select at least one framework so the dashboard narrative reflects the right scope." : null,
+            overview.nextActions.length === 0 ? "The command center will be stronger once action generation has live signals to work from." : null,
           ].filter(Boolean) as string[],
         };
       case "inventory":
         return {
           ...stage,
-          progress: averagePercent([aiSystems.length > 0 ? 100 : 0, vendors.length > 0 ? 100 : 0, aiOwnerCoverage, vendorCoverage]),
-          metric: `${aiSystems.length + vendors.length} mapped systems and vendors`,
-          liveSignal: `${aiSystems.length} AI systems are tracked, ${overview.aiRollup.pendingApproval} still need approval, and ${overview.vendorRollup.outstandingGaps} vendor document gaps remain.`,
+          progress: averagePercent([
+            cloudServices.length > 0 ? 100 : 0,
+            aiSystems.length > 0 ? 100 : 0,
+            vendors.length > 0 ? 100 : 0,
+            cloudOwnerCoverage,
+            cloudApprovalCoverage,
+            aiOwnerCoverage,
+            vendorCoverage,
+          ]),
+          metric: `${cloudServices.length} cloud services, ${aiSystems.length} AI systems, ${vendors.length} vendors`,
+          liveSignal: `${cloudServices.length} cloud services are tracked, ${overview.aiRollup.pendingApproval} AI systems still need approval coverage, and ${overview.vendorRollup.outstandingGaps} vendor documentation gaps remain.`,
           blockers: [
+            cloudServices.length === 0 ? "Register the cloud services the organization actually depends on." : null,
             aiSystems.length === 0 ? "Register the AI systems or automations that create real business exposure." : null,
             vendors.length === 0 ? "Capture the vendors and cloud suppliers your operations depend on." : null,
+            cloudOwnerCoverage < 100 ? `${cloudServices.length - cloudServices.filter((service: any) => hasTextValue(service.owner)).length} cloud services still lack named owners.` : null,
             overview.aiRollup.pendingApproval > 0 ? `${overview.aiRollup.pendingApproval} AI systems are still pending approval coverage.` : null,
             overview.vendorRollup.outstandingGaps > 0 ? `${overview.vendorRollup.outstandingGaps} vendor reviews still have unresolved documentation gaps.` : null,
           ].filter(Boolean) as string[],
         };
-      case "baseline":
-        return {
-          ...stage,
-          progress: averagePercent([overview.readiness.latestAssessmentScore, ratioPercent(readinessAnswered, readinessQuestions.length), maturityCoverage]),
-          metric: `${overview.readiness.latestAssessmentScore}% readiness baseline`,
-          liveSignal: `${readinessAnswered}/${readinessQuestions.length} readiness questions are answered and the maturity support view sits at ${overview.maturitySupport.label}.`,
-          blockers: [
-            readinessAnswered < readinessQuestions.length ? `${readinessQuestions.length - readinessAnswered} readiness questions still need answers.` : null,
-            overview.readiness.latestAssessmentScore === 0 ? "Run the readiness assessment once so the dashboard can generate a real baseline." : null,
-            (actionPlan?.summary.active ?? 0) === 0 ? "Action generation has little to work with until assessment signals are stored." : null,
-          ].filter(Boolean) as string[],
-        };
-      case "governance":
+      case "risk":
         return {
           ...stage,
           progress: averagePercent([
-            domainScoreValue(overview, "ai_governance"),
             domainScoreValue(overview, "risk_management"),
-            domainScoreValue(overview, "policy_maturity"),
+            riskOwnerCoverage,
+            riskTreatmentCoverage,
+            riskDueCoverage,
+            riskControlCoverage,
           ]),
-          metric: `${controls.length} controls and ${policies.length} policies in play`,
-          liveSignal: `${overview.riskRollup.highOrCritical} elevated risks exist, ${overview.riskRollup.withoutControls} still lack control links, and ${overview.policyRollup.draftOrExpired} policies are draft or expired.`,
+          metric: `${risks.length} risks tracked`,
+          liveSignal: `${overview.riskRollup.highOrCritical} risks are high or critical and ${overview.riskRollup.withoutControls} risks still lack linked controls.`,
           blockers: [
-            overview.riskRollup.highOrCritical > 0 ? `${overview.riskRollup.highOrCritical} risks are still high or critical.` : null,
+            risks.length === 0 ? "Create or review the first risk records so treatment can begin." : null,
+            overview.riskRollup.highOrCritical > 0 ? `${overview.riskRollup.highOrCritical} risks still need urgent treatment focus.` : null,
             overview.riskRollup.withoutControls > 0 ? `${overview.riskRollup.withoutControls} risks still need linked controls.` : null,
-            overview.aiRollup.pendingApproval > 0 ? `${overview.aiRollup.pendingApproval} AI systems still need approval coverage.` : null,
+            riskOwnerCoverage < 100 ? `${risks.length - risks.filter((risk: any) => hasTextValue(risk.owner)).length} risks still have no owner.` : null,
+          ].filter(Boolean) as string[],
+        };
+      case "controls":
+        return {
+          ...stage,
+          progress: averagePercent([
+            controlImplementedCoverage,
+            domainScoreValue(overview, "policy_maturity"),
+            policyApprovedCoverage,
+          ]),
+          metric: `${controls.length} controls and ${policies.length} policies`,
+          liveSignal: `${controls.length} controls are in the library, ${overview.policyRollup.draftOrExpired} policies are draft or expired, and ${overview.policyRollup.missingPriorityPolicies.length} priority policy types are still missing.`,
+          blockers: [
+            controls.length === 0 ? "The first control library should be reviewed and activated here." : null,
+            controlImplementedCoverage < 70 ? "A large share of controls still need implementation or evidence follow-through." : null,
             overview.policyRollup.draftOrExpired > 0 ? `${overview.policyRollup.draftOrExpired} policies need review or approval attention.` : null,
             (overview.policyRollup.missingPriorityPolicies?.length ?? 0) > 0
               ? `${overview.policyRollup.missingPriorityPolicies.length} priority policy types are still missing.`
               : null,
           ].filter(Boolean) as string[],
         };
-      case "assurance":
+      case "evidence":
         return {
           ...stage,
           progress: averagePercent([
@@ -328,21 +412,45 @@ function buildJourneyStageCards({
             overview.incidentRollup.unresolved > 0 ? `${overview.incidentRollup.unresolved} incidents are still unresolved.` : null,
           ].filter(Boolean) as string[],
         };
-      case "reporting":
+      case "maturity":
+        return {
+          ...stage,
+          progress: maturityCoverage,
+          metric: `${overview.maturitySupport.level} - ${overview.maturitySupport.label}`,
+          liveSignal: `${overview.maturitySupport.domains.length} maturity domains are available and the current support level is ${overview.maturitySupport.label}.`,
+          blockers: [
+            maturityCoverage < 70 ? "The maturity pattern is still below a managed operating level in several domains." : null,
+            overview.maturitySupport.domains.some((domain: any) => domain.score <= 2)
+              ? "At least one maturity domain is still informal or basic and needs targeted uplift."
+              : null,
+          ].filter(Boolean) as string[],
+        };
+      case "reports":
+        return {
+          ...stage,
+          progress: averagePercent([overview.score.overall, overview.reports.length > 0 ? 100 : 0, overview.reportPreviews.length > 0 ? 100 : 0]),
+          metric: `${overview.reports.length} stored reports`,
+          liveSignal: `${overview.reportPreviews.length} live report previews are available and the current posture is ${overview.score.status}.`,
+          blockers: [
+            overview.reports.length === 0 ? "No stored report history exists yet for review or assurance." : null,
+            missingEvidenceSlots > 0 ? "Missing evidence still weakens the quality of any report story." : null,
+            overview.riskRollup.highOrCritical > 0 ? "High or critical risks should be acknowledged before external reporting." : null,
+          ].filter(Boolean) as string[],
+        };
+      case "improvement":
         return {
           ...stage,
           progress: averagePercent([
             overview.score.overall,
             criticalActions === 0 ? 100 : clampPercent(100 - criticalActions * 25),
-            overview.topRisks.length === 0 ? 100 : clampPercent(100 - overview.topRisks.length * 12),
-            overview.reports.length > 0 ? 100 : 0,
+            activeActions === 0 ? 100 : clampPercent(100 - activeActions * 10),
           ]),
-          metric: `${overview.score.overall}% overall FC237 score`,
-          liveSignal: `${overview.score.status} posture with ${actionPlan?.summary.active ?? 0} active actions, ${criticalActions} critical actions, and ${overview.reports.length} stored reports.`,
+          metric: `${activeActions} active actions`,
+          liveSignal: `${overview.score.status} posture with ${activeActions} active actions, ${criticalActions} critical actions, and ${overview.reports.length} stored reports.`,
           blockers: [
-            overview.score.overall < 60 ? "The overall score is still weak enough that any external story should stay cautious and honest." : null,
+            activeActions > 0 ? `${activeActions} recommended actions are still open and should shape the next improvement sprint.` : null,
             criticalActions > 0 ? `${criticalActions} critical actions still need closure before the posture is stable.` : null,
-            overview.reports.length === 0 ? "No stored readiness report exists yet for audit or leadership history." : null,
+            overview.score.overall < 60 ? "The overall posture is still weak enough that the next cycle should stay tightly focused on remediation." : null,
           ].filter(Boolean) as string[],
         };
       default:
@@ -378,12 +486,14 @@ function buildJourneyStageCards({
 export function FrameworkPage() {
   const dashboard = useQuery(api.dashboard.getOverview);
   const actionPlan = useQuery(api.tasks.getActionPlan, {});
+  const cloudServices = useQuery(api.cloudServices.list) ?? [];
   const controls = useQuery(api.controls.list) ?? [];
   const evidence = useQuery(api.evidence.list) ?? [];
   const vendors = useQuery(api.vendors.list) ?? [];
   const policies = useQuery(api.policies.list) ?? [];
   const aiSystems = useQuery(api.aiSystems.list) ?? [];
   const incidents = useQuery(api.incidents.list) ?? [];
+  const risks = useQuery(api.risks.list) ?? [];
 
   const overview = dashboard && !dashboard.needsOnboarding ? dashboard : null;
 
@@ -431,7 +541,7 @@ export function FrameworkPage() {
           case "governance":
             return {
               ...section,
-              metric: `${aiSystems.length + controls.length}`,
+              metric: `${cloudServices.length + aiSystems.length + controls.length}`,
               progress: Math.round(
                 ((overview.domainScores.find((domain: any) => domain.key === "ai_governance")?.score ?? 0) +
                   (overview.domainScores.find((domain: any) => domain.key === "risk_management")?.score ?? 0) +
@@ -440,7 +550,7 @@ export function FrameworkPage() {
               ),
               status: `${overview.riskRollup.highOrCritical} elevated risks`,
               tone: overview.riskRollup.highOrCritical > 0 ? "orange" : "green",
-              detail: `${aiSystems.length} AI systems, ${controls.length} controls, and ${policies.length} policy records are sharing one execution model.`,
+              detail: `${cloudServices.length} cloud services, ${aiSystems.length} AI systems, ${controls.length} controls, and ${policies.length} policy records are sharing one execution model.`,
               highlights: [
                 `${overview.riskRollup.withoutControls} risks still need control links.`,
                 `${overview.aiRollup.pendingApproval} AI systems are still waiting on approval coverage.`,
@@ -500,14 +610,16 @@ export function FrameworkPage() {
         actionPlan,
         profileCompletion,
         selectedFrameworks,
+        cloudServices,
         controls,
         evidence,
         vendors,
         policies,
         aiSystems,
         incidents,
+        risks,
       })
-    : { recommendedKey: "setup" as JourneyStageKey, stageCards: [] };
+    : { recommendedKey: "questionnaire" as JourneyStageKey, stageCards: [] };
   const currentStage = stageCards.find((stage) => stage.key === (selectedStageKey ?? recommendedKey)) ?? stageCards[0];
   const currentTrack = guideTracks.find((track) => track.key === selectedTrackKey) ?? guideTracks[0];
   const focusedPlaybooks = currentStage
@@ -530,9 +642,9 @@ export function FrameworkPage() {
         }
       : {
           score: 0,
-          status: "Awaiting setup",
+          status: "Awaiting questionnaire",
           tone: "neutral",
-          detail: "Assign the risk owner, cyber focal point, and cloud approval rules to activate live governance mapping.",
+          detail: "Complete the initial questionnaire so FC237 can assign the first owners, baseline controls, and governance expectations.",
         },
     compliance: overview
       ? {
@@ -547,9 +659,9 @@ export function FrameworkPage() {
         }
       : {
           score: 0,
-          status: "Awaiting setup",
+          status: "Awaiting questionnaire",
           tone: "neutral",
-          detail: "Once vendor, evidence, and policy records exist, FC237 can map them directly to the compliance pillar.",
+          detail: "Once the baseline questionnaire creates vendor, evidence, and policy records, FC237 can map them directly to the compliance pillar.",
         },
     technical: overview
       ? {
@@ -560,9 +672,9 @@ export function FrameworkPage() {
         }
       : {
           score: 0,
-          status: "Awaiting setup",
+          status: "Awaiting questionnaire",
           tone: "neutral",
-          detail: "Readiness answers, controls, and incident records unlock the live technical-control view.",
+          detail: "Questionnaire answers, controls, and incident records unlock the live technical-control view.",
         },
   };
   const selectedPillarSignal = pillarLiveSignals[selectedPillar.key];
@@ -596,10 +708,10 @@ export function FrameworkPage() {
             },
             {
               label: "Live FC237 Score",
-              value: overview ? `${overview.score.overall}%` : "Awaiting setup",
+              value: overview ? `${overview.score.overall}%` : "Awaiting assessment",
               detail: overview
                 ? `${overview.score.status} posture with ${activeActions} active actions and ${overview.topRisks.length} urgent risks.`
-                : "The documentation is available immediately; live mapping appears after onboarding and the first readiness run.",
+                : "The documentation is available immediately; live mapping appears after the initial questionnaire creates a real baseline.",
               tone: overview ? scoreTone(overview.score.status) : "neutral",
             },
           ]}
@@ -764,7 +876,7 @@ export function FrameworkPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Ten-Step Operating Model" description="This is the exact implementation journey FC237 expects users to move through from first setup to continuous review.">
+      <SectionCard title="Ten-Step Operating Model" description="This is the exact implementation journey FC237 expects users to move through from the first questionnaire to continuous improvement.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {frameworkOperatingModelSteps.map((step) => (
             <Link
@@ -1298,10 +1410,10 @@ export function FrameworkPage() {
         <SectionCard title="Activate live workspace mapping">
           <EmptyState
             title="Framework documentation is ready"
-            message="Complete onboarding and submit the first readiness assessment to unlock the live journey, workspace alignment cards, and action-driven guidance that sit on top of this documentation."
+            message="Complete the initial questionnaire first to unlock the live journey, workspace alignment cards, and action-driven guidance that sit on top of this documentation."
             action={
               <Link href="/onboarding">
-                <Button>Open onboarding</Button>
+                <Button>Start Readiness Assessment</Button>
               </Link>
             }
           />
@@ -1314,12 +1426,14 @@ export function FrameworkPage() {
 export function ResourcesPage() {
   const dashboard = useQuery(api.dashboard.getOverview);
   const actionPlan = useQuery(api.tasks.getActionPlan, {});
+  const cloudServices = useQuery(api.cloudServices.list) ?? [];
   const controls = useQuery(api.controls.list) ?? [];
   const evidence = useQuery(api.evidence.list) ?? [];
   const vendors = useQuery(api.vendors.list) ?? [];
   const policies = useQuery(api.policies.list) ?? [];
   const aiSystems = useQuery(api.aiSystems.list) ?? [];
   const incidents = useQuery(api.incidents.list) ?? [];
+  const risks = useQuery(api.risks.list) ?? [];
   const [trackFilter, setTrackFilter] = useState<GuideTrackKey | "all">("all");
   const [stageFilter, setStageFilter] = useState<JourneyStageKey | "all">("all");
 
@@ -1332,14 +1446,16 @@ export function ResourcesPage() {
         actionPlan,
         profileCompletion,
         selectedFrameworks,
+        cloudServices,
         controls,
         evidence,
         vendors,
         policies,
         aiSystems,
         incidents,
+        risks,
       })
-    : { recommendedKey: "setup" as JourneyStageKey, stageCards: [] };
+    : { recommendedKey: "questionnaire" as JourneyStageKey, stageCards: [] };
   const recommendedStage = stageCards.find((stage) => stage.key === recommendedKey) ?? stageCards[0];
   const activeTrack = trackFilter === "all" ? null : guideTracks.find((track) => track.key === trackFilter) ?? null;
   const recommendations: Array<{ title: string; detail: string; href: any }> = [];
@@ -1353,11 +1469,11 @@ export function ResourcesPage() {
       });
     }
 
-    if (overview.readiness.latestAssessmentScore === 0 || recommendedKey === "baseline") {
+    if (overview.readiness.latestAssessmentScore === 0 || recommendedKey === "questionnaire") {
       recommendations.push({
         title: "Start with the readiness assessment",
-        detail: "No stored readiness score exists yet, so the question bank is still the fastest way to unlock domain scoring and action generation.",
-        href: "/readiness",
+        detail: "No stored readiness baseline exists yet, so the initial questionnaire is still the fastest way to unlock domain scoring and action generation.",
+        href: "/onboarding",
       });
     }
 
@@ -1425,7 +1541,7 @@ export function ResourcesPage() {
               value: recommendedStage ? `${recommendedStage.step}` : "01",
               detail: recommendedStage
                 ? `${recommendedStage.title}. ${recommendedStage.beginnerSummary}`
-                : "Complete onboarding so the resource library can recommend a stage automatically.",
+                : "Complete the initial questionnaire so the resource library can recommend a stage automatically.",
               tone: (recommendedStage?.tone ?? "orange") as "green" | "orange" | "red" | "neutral" | "purple" | "yellow",
             },
             {
@@ -1486,8 +1602,8 @@ export function ResourcesPage() {
           </div>
         ) : (
           <EmptyState
-            title="Resources become smarter after onboarding"
-            message="Once the workspace has an organization and seeded records, this page will point people to the exact guide stage that matters most."
+            title="Resources become smarter after the first assessment"
+            message="Once the workspace has questionnaire-generated records, this page will point people to the exact FC237 stage that matters most."
           />
         )}
       </SectionCard>
@@ -1643,8 +1759,8 @@ export function ResourcesPage() {
           />
         ) : (
           <EmptyState
-            title="Resources become smarter after onboarding"
-            message="Once the workspace has an organization and seeded records, this page will start pointing to the specific playbooks and starter packs that match the current gaps."
+            title="Resources become smarter after the first assessment"
+            message="Once the workspace has questionnaire-generated records, this page will start pointing to the specific playbooks and starter packs that match the current gaps."
           />
         )}
       </SectionCard>
@@ -1701,10 +1817,10 @@ export function SettingsPage() {
         <SectionCard title="Organization settings">
           <EmptyState
             title="Organization required"
-            message="Complete onboarding first so the settings page has a real profile to edit and the guide-backed workflow has the right defaults."
+            message="Complete the initial questionnaire first so the settings page has a real profile to edit and the guide-backed workflow has the right defaults."
             action={
               <Link href="/onboarding">
-                <Button>Open onboarding</Button>
+                <Button>Start Readiness Assessment</Button>
               </Link>
             }
           />
@@ -1913,7 +2029,7 @@ export function SettingsPage() {
                     <input className={fieldClass} defaultValue={organization.branding?.shortName ?? organization.name} name="shortName" />
                   </Field>
                   <Field label="Logo URL">
-                    <input className={fieldClass} defaultValue={organization.branding?.logoUrl ?? ""} name="logoUrl" />
+                    <input className={fieldClass} defaultValue={organization.branding?.logoUrl ?? "/fc237-logo.png"} name="logoUrl" />
                   </Field>
                   <Field label="Primary color">
                     <input className={fieldClass} defaultValue={organization.branding?.primaryColor ?? "#0f766e"} name="primaryColor" />
@@ -1942,11 +2058,8 @@ export function SettingsPage() {
 
               <div className="rounded-[1.75rem] border border-border/70 bg-muted/20 p-5">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="flex size-12 items-center justify-center rounded-2xl text-white shadow-sm"
-                    style={{ background: organization.branding?.primaryColor ?? "#0f766e" }}
-                  >
-                    <BellRing className="size-5" />
+                  <div className="flex size-20 items-center justify-center rounded-[1.4rem] border border-border/70 bg-background p-2 shadow-sm">
+                    <ProjectLogo className="max-h-12 w-auto max-w-full" src={organization.branding?.logoUrl} />
                   </div>
                   <div>
                     <div className="text-sm font-semibold">{organization.branding?.shortName ?? organization.name}</div>
@@ -1975,7 +2088,7 @@ export function SettingsPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit">Save settings</Button>
-            <span className="text-sm text-muted-foreground">These changes update the current organization record and keep existing seeded workflow data intact.</span>
+            <span className="text-sm text-muted-foreground">These changes update the current organization record and keep the existing workflow data intact.</span>
           </div>
         </form>
       )}
@@ -2068,7 +2181,7 @@ export function AdminPage() {
         {overview ? (
           <LinkedRecordStack items={watchlist} />
         ) : (
-          <EmptyState title="Admin view pending onboarding" message="Create the organization first so the admin page can show real membership, audit, reporting, and action-generation signals." />
+          <EmptyState title="Admin view pending first assessment" message="Complete the initial questionnaire first so the admin page can show real membership, audit, reporting, and action-generation signals." />
         )}
       </SectionCard>
 

@@ -23,8 +23,8 @@ import {
   ListChecks,
   LockKeyhole,
   MessageSquareWarning,
+  Server,
   Settings,
-  Shield,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -35,6 +35,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
+import { ProjectLogo } from "@/components/project-logo";
 import type { ConvexLoadState } from "@/lib/convex-page-load";
 
 type NavItem = { href: Route; label: string; helper: string; icon: LucideIcon };
@@ -42,24 +43,23 @@ type NavGroup = { title: string; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
   {
-    title: "Command Center",
+    title: "Start Here",
     items: [
+      { href: "/onboarding", label: "Initial Questionnaire", helper: "Start readiness assessment", icon: FileText },
       { href: "/dashboard", label: "Dashboard", helper: "Overall score and domain signals", icon: Home },
-      { href: "/assistant", label: "Assistant", helper: "OpenAI or Gemini guidance for Cameroon context", icon: Bot },
-      { href: "/action-plan", label: "Action Plan", helper: "Recommended next actions", icon: ClipboardCheck },
     ],
   },
   {
-    title: "Assessments",
+    title: "Inventory",
     items: [
-      { href: "/readiness", label: "Readiness", helper: "Question-bank scoring", icon: Cloud },
-      { href: "/maturity", label: "Maturity", helper: "Supporting 1-5 view", icon: BarChart3 },
-    ],
-  },
-  {
-    title: "Governance",
-    items: [
+      { href: "/inventory" as Route, label: "Cloud Inventory", helper: "Approved services and owners", icon: Server },
       { href: "/ai-systems", label: "AI Systems", helper: "Owners, approvals, data flags", icon: BrainCircuit },
+      { href: "/vendors", label: "Vendors", helper: "Structured assurance reviews", icon: Building2 },
+    ],
+  },
+  {
+    title: "Risk And Controls",
+    items: [
       { href: "/ai-risks", label: "AI Risks", helper: "Customer-data and model risk", icon: AlertTriangle },
       { href: "/risks", label: "Risk Register", helper: "Treatment and due dates", icon: Gauge },
       { href: "/controls", label: "Controls", helper: "Central control library", icon: ListChecks },
@@ -67,18 +67,26 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Assurance",
+    title: "Assurance And Reporting",
     items: [
-      { href: "/vendors", label: "Vendors", helper: "Structured assurance reviews", icon: Building2 },
       { href: "/evidence", label: "Evidence", helper: "Lifecycle and review state", icon: Archive },
+      { href: "/maturity", label: "Maturity", helper: "Supporting 1-5 view", icon: BarChart3 },
       { href: "/incidents", label: "Incidents", helper: "Response tracking", icon: MessageSquareWarning },
       { href: "/reports", label: "Reports", helper: "Live PDF and previews", icon: FileText },
     ],
   },
   {
+    title: "Continuous Improvement",
+    items: [
+      { href: "/action-plan", label: "Action Plan", helper: "Recommended next actions", icon: ClipboardCheck },
+      { href: "/assistant", label: "Assistant", helper: "OpenAI or Gemini guidance for Cameroon context", icon: Bot },
+      { href: "/readiness", label: "Readiness", helper: "Refresh domain scoring", icon: Cloud },
+    ],
+  },
+  {
     title: "Knowledge Base",
     items: [
-      { href: "/framework", label: "Framework", helper: "Guide-backed orientation", icon: Shield },
+      { href: "/framework", label: "Framework", helper: "Guide-backed orientation", icon: Library },
       { href: "/resources", label: "Resources", helper: "Suggested work sequence", icon: Library },
     ],
   },
@@ -116,13 +124,11 @@ export default function PlatformShell({
       <div className="grid min-h-screen lg:grid-cols-[310px_1fr]">
         <aside className="hidden border-r bg-background/84 backdrop-blur lg:block dark:bg-background/72">
           <div className="flex h-full flex-col">
-            <Link href="/dashboard" className="flex items-center gap-3 px-6 py-6">
-              <div className="flex size-12 items-center justify-center rounded-[1.5rem] bg-primary text-primary-foreground shadow-md shadow-primary/20">
-                <Shield />
-              </div>
+            <Link href="/dashboard" className="grid gap-3 px-6 py-6">
+              <ProjectLogo className="max-w-[180px]" src={current?.organization?.branding?.logoUrl} />
               <div>
-                <div className="text-2xl font-semibold tracking-tight">FC237</div>
-                <div className="text-xs text-muted-foreground">Web-first compliance workspace</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Compliance And Governance</div>
+                <div className="mt-1 text-xs text-muted-foreground">Guided from initial questionnaire to continuous improvement.</div>
               </div>
             </Link>
 
@@ -168,11 +174,10 @@ export default function PlatformShell({
             <div className="flex min-h-20 flex-wrap items-center justify-between gap-4 px-4 py-4 lg:px-8">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 lg:hidden">
-                  <Shield className="text-primary" />
-                  <span className="text-lg font-semibold">FC237</span>
+                  <ProjectLogo className="max-w-[120px]" src={current?.organization?.branding?.logoUrl} />
                 </div>
                 <p className="hidden text-sm text-muted-foreground sm:block">
-                  Command center for readiness, risks, controls, evidence, vendors, incidents, policy work, and reporting.
+                  Guided flow: initial questionnaire, dashboard, inventory, risk treatment, controls, evidence, maturity, reports, and continuous improvement.
                 </p>
               </div>
               <div className="flex items-center gap-2">

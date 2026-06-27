@@ -23,6 +23,9 @@ const DEFAULT_CAMEROON_CONTEXT =
 const DEFAULT_DISCLAIMER =
   "This assistant supports operational compliance and governance planning for Cameroon-based organizations. It is not a substitute for Cameroonian legal advice, sector regulator guidance, or incident-response specialists.";
 
+const FC237_WORKFLOW_GUIDE =
+  "Initial Questionnaire -> Dashboard -> Inventory -> Risk Assessment -> Controls -> Evidence -> Maturity -> Reports -> Continuous Improvement.";
+
 const assistantResponseSchema = {
   type: "object",
   properties: {
@@ -103,6 +106,8 @@ export function buildCameroonSystemPrompt(organizationName: string) {
     "Important Cameroon legal framing: Cameroon has an established cyber law baseline through Law No. 2010/012 of 21 December 2010 on cybersecurity and cybercriminality. MINPOSTEL reported on 2 December 2024 that Parliament adopted a bill on the protection of personal data. Unless the user provides newer verified legal status, treat that personal-data development as evolving legislative context instead of confidently stating final enactment or enforcement details.",
     "Practical institutional framing: ANTIC is an important Cameroon cybersecurity and information-system security actor. Favor pragmatic controls such as access control, incident logging, evidence retention, vendor due diligence, and data-handling discipline that fit Cameroon-based operating realities.",
     "Be operational, concise, and decisive. Tie every answer back to the workspace data when possible.",
+    `Always teach the FC237 operating flow explicitly: ${FC237_WORKFLOW_GUIDE}`,
+    "If the user sounds unsure, explain what the current stage means, why it matters, and which module they should open next.",
     "Do not invent Cameroon laws, regulators, filing obligations, or deadlines. If the answer would require current legal confirmation, say so plainly and recommend local counsel or the relevant regulator.",
     "Do not answer like a generic chatbot. Prioritize the user's next best governance step, the related risk, the evidence they should keep, and the escalation threshold.",
     "Return only valid JSON matching the requested schema.",
@@ -153,6 +158,7 @@ export function buildAssistantWorkspaceContext(args: {
     `Today: ${new Date().toISOString().slice(0, 10)}`,
     `Organization: ${organization?.name ?? "Unknown"} | sector=${organization?.sector ?? "Unknown"} | location=${organization?.location ?? "Unknown"} | size=${organization?.sizeCategory ?? "Unknown"}`,
     `Organization profile: risk_owner=${organization?.riskOwner ?? "Unknown"} | cyber_focal_point=${organization?.cyberFocalPoint ?? "Unknown"} | frameworks=${summarizeList(organization?.selectedFrameworks ?? [], "none selected")}`,
+    `Required FC237 workflow: ${FC237_WORKFLOW_GUIDE}`,
     `Overall score: ${overview?.score?.overall ?? 0}% (${overview?.score?.status ?? "Unknown"})`,
     `Domain scores: ${domainScores || "No domain scores available."}`,
     `Assistant insight: ${overview?.assistantInsight?.title ?? "Unknown"} | ${overview?.assistantInsight?.summary ?? "No insight available."}`,
@@ -246,7 +252,7 @@ export function buildFallbackResponse(
       recommendedActions: (overview?.nextActions ?? []).slice(0, 3).map((task: any) => task.title),
       priority: lowest?.status ?? "Moderate",
       evidenceToKeep: ["assessment responses", "scorecard snapshot", "follow-up action log"],
-      nextStep: firstAction ? `Move to ${firstAction.title} and assign an owner.` : "Open the readiness module and submit a fresh assessment.",
+      nextStep: firstAction ? `Review the dashboard, then move to "${firstAction.title}" and assign an owner.` : "Open the dashboard, then continue through inventory, risk, and controls based on the weakest domain.",
       escalationNotice:
         "Escalate if the assessment reveals customer data exposure, missing administrative access control, or an unresolved critical risk.",
       referencedScore: `${lowest?.label ?? "Readiness"}: ${lowest?.score ?? 0}%`,
@@ -270,7 +276,7 @@ export function buildFallbackResponse(
       ],
       priority: (overview?.evidenceRollup?.acceptedCoverage ?? 0) < 50 ? "High" : "Moderate",
       evidenceToKeep: ["accepted screenshots", "review comments", "vendor documents", "policy approvals"],
-      nextStep: "Open the Evidence Vault and filter for pending, rejected, or expired records.",
+      nextStep: "Open the Evidence Vault after reviewing the dashboard, then filter for pending, rejected, or expired records.",
       escalationNotice:
         "Escalate when a high-priority control has no evidence before an audit, customer review, or management report.",
       referencedScore: `Evidence Coverage: ${overview?.domainScores?.find((item: any) => item.key === "evidence_coverage")?.score ?? 0}%`,
@@ -294,7 +300,7 @@ export function buildFallbackResponse(
       ],
       priority: (overview?.incidentRollup?.unresolved ?? 0) > 0 ? "High" : "Moderate",
       evidenceToKeep: ["incident timeline", "screenshots", "provider ticket reference", "closure note"],
-      nextStep: "Open the incidents module and update any open or monitoring cases.",
+      nextStep: "Open Incidents after checking the dashboard alerts, then update any open or monitoring cases.",
       escalationNotice:
         "Escalate immediately for ransomware, data leakage, confirmed account compromise, or regulated personal-data exposure.",
       referencedScore: `Incident Readiness: ${overview?.domainScores?.find((item: any) => item.key === "incident_readiness")?.score ?? 0}%`,
@@ -318,7 +324,7 @@ export function buildFallbackResponse(
       ],
       priority: overview?.score?.status ?? "Moderate",
       evidenceToKeep: ["generated readiness summary PDF", "risk register preview", "action plan preview"],
-      nextStep: "Open Reports and generate the Compliance Readiness Summary PDF from current data.",
+      nextStep: "Open Reports once dashboard, inventory, risk, controls, and evidence signals are current, then generate the Compliance Readiness Summary PDF.",
       escalationNotice:
         "Escalate if the report is being used for a contractual, legal, or regulatory submission and critical gaps remain unresolved.",
       referencedScore: `Overall FC237 Score: ${overview?.score?.overall ?? 0}%`,
@@ -343,7 +349,7 @@ export function buildFallbackResponse(
       ],
       priority: draftOrExpired > 0 ? "High" : "Moderate",
       evidenceToKeep: ["policy approval note", "review date", "linked evidence references"],
-      nextStep: "Open the policy center and focus on draft, missing, or expired items.",
+      nextStep: "Open Policies after reviewing controls and risks, then focus on draft, missing, or expired items.",
       escalationNotice:
         "Escalate if a required policy is missing while customer data, AI systems, or unresolved incidents are in scope.",
       referencedScore: `Policy Maturity: ${overview?.domainScores?.find((item: any) => item.key === "policy_maturity")?.score ?? 0}%`,
@@ -368,7 +374,7 @@ export function buildFallbackResponse(
       recommendedActions: (overview?.nextActions ?? []).slice(0, 4).map((task: any) => task.title),
       priority: lowest?.status ?? "Moderate",
       evidenceToKeep: ["action plan updates", "linked control evidence", "vendor review pack"],
-      nextStep: firstAction ? `Go to the action plan and progress "${firstAction.title}".` : "Generate the action plan from current data.",
+      nextStep: firstAction ? `Review the dashboard, then go to the action plan and progress "${firstAction.title}".` : "Use the dashboard to choose the weakest stage, then generate or review the action plan from current data.",
       escalationNotice:
         "Escalate if a critical risk has no owner, no due date, or no linked control/evidence path.",
       referencedScore: `${lowest?.label ?? "Readiness"}: ${lowest?.score ?? 0}%`,
@@ -387,7 +393,7 @@ export function buildFallbackResponse(
     recommendedActions: overview?.assistantInsight?.recommendedActions ?? [],
     priority: overview?.score?.status ?? "Moderate",
     evidenceToKeep: ["dashboard snapshot", "risk register", "action plan summary"],
-    nextStep: firstAction ? `Start with "${firstAction.title}".` : "Open the dashboard and refresh the readiness workflow.",
+    nextStep: firstAction ? `Start with "${firstAction.title}" after reviewing the dashboard and current journey stage.` : "Open the dashboard and continue through the FC237 workflow from inventory to improvement.",
     escalationNotice:
       "Escalate when a critical risk, missing incident capability, or unapproved customer-facing AI workflow remains open.",
     referencedScore: `Overall FC237 Score: ${overview?.score?.overall ?? 0}%`,

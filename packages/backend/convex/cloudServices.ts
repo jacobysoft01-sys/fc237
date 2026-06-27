@@ -46,3 +46,39 @@ export const create = mutation({
   },
 });
 
+export const update = mutation({
+  args: {
+    id: v.id("cloudServices"),
+    serviceName: v.optional(v.string()),
+    providerName: v.optional(v.string()),
+    serviceModel: v.optional(v.string()),
+    purpose: v.optional(v.string()),
+    dataStored: v.optional(v.string()),
+    approved: v.optional(v.boolean()),
+    owner: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const active = await getActiveOrganization(ctx);
+    if (!active?.organization || !active.membership) throw new Error("Organization setup required");
+    assertRole(active.membership.role, ["owner", "admin", "consultant", "member"]);
+
+    const record = await ctx.db.get(args.id);
+    if (!record || record.organizationId !== active.organization._id) {
+      throw new Error("The selected cloud service could not be found.");
+    }
+
+    const { id, ...updates } = args;
+    await ctx.db.patch(id, updates);
+    await logAuditEvent(ctx, {
+      organizationId: active.organization._id,
+      userId: active.user._id,
+      action: "cloud_service.updated",
+      entityType: "cloudService",
+      entityId: id,
+      metadata: { serviceName: args.serviceName ?? record.serviceName },
+    });
+
+    return await ctx.db.get(id);
+  },
+});
+
