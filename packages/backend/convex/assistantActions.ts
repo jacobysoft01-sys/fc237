@@ -98,13 +98,10 @@ function getProviderOrder() {
   const openai = getOpenAISettings();
   const gemini = getGeminiSettings();
   const configured = [openai, gemini].filter((provider): provider is ProviderSettings => Boolean(provider));
-  const preference = (process.env.ASSISTANT_PROVIDER ?? process.env.AI_PROVIDER ?? "auto").toLowerCase();
+  const preference = (process.env.ASSISTANT_PROVIDER ?? process.env.AI_PROVIDER ?? "gemini").toLowerCase();
+  const preferredKind: ProviderKind = preference === "openai" ? "openai" : "gemini";
 
-  if (preference === "gemini") {
-    return configured.sort((left, right) => Number(left.kind !== "gemini") - Number(right.kind !== "gemini"));
-  }
-
-  return configured.sort((left, right) => Number(left.kind !== "openai") - Number(right.kind !== "openai"));
+  return configured.sort((left, right) => Number(left.kind !== preferredKind) - Number(right.kind !== preferredKind));
 }
 
 function trimMessageHistory(messages: any[]) {
@@ -209,7 +206,7 @@ function buildFailoverDeliveryNote(failedAttempts: ProviderAttemptError[], activ
 
 function buildFallbackDeliveryNote(failedAttempts: ProviderAttemptError[], configuredProviders: ProviderSettings[]) {
   if (configuredProviders.length === 0) {
-    return "No AI provider key is configured yet. Add OPENAI_API_KEY or GEMINI_API_KEY to enable live model guidance.";
+    return "No AI provider key is configured yet. Add GEMINI_API_KEY or OPENAI_API_KEY to enable live model guidance.";
   }
 
   if (failedAttempts.length > 0) {

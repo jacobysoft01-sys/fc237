@@ -84,7 +84,7 @@ export function AssistantPage() {
   return (
     <ModulePage
       title="Assistant"
-      description="The FC237 assistant uses your live workspace data with Cameroon-aware governance instructions and can switch between OpenAI and Gemini so guidance stays practical even when one provider is unavailable."
+      description="The FC237 assistant uses your live workspace data with Cameroon-aware governance instructions, prefers Gemini for day-to-day guidance, and keeps OpenAI available as fallback when Gemini is unavailable."
       icon={Bot}
       summary={
         <SummaryGrid
@@ -109,8 +109,8 @@ export function AssistantPage() {
             },
             {
               label: "Runtime",
-              value: "OpenAI + Gemini",
-              detail: "Responses stay grounded in FC237 records and can fail over between providers when credits or availability change.",
+              value: "Gemini first",
+              detail: "Responses stay grounded in FC237 records, use Gemini as the primary model path, and fail over to OpenAI only when needed.",
               tone: "green",
             },
           ]}

@@ -49,7 +49,7 @@ Required production values:
 - Vercel: `CLERK_SECRET_KEY`
 - Convex dashboard environment: `CLERK_JWT_ISSUER_DOMAIN`
 - Convex dashboard environment: `OPENAI_API_KEY` and/or `GEMINI_API_KEY` if you want the assistant enabled in production
-- Optional assistant environment: `ASSISTANT_PROVIDER` with `openai`, `gemini`, or `auto`
+- Optional assistant environment: `ASSISTANT_PROVIDER` with `gemini`, `openai`, or `auto`
 - Optional assistant environment: `OPENAI_MODEL` or `GEMINI_MODEL` if you want to override the default assistant model
 
 Required production alignment:
@@ -62,7 +62,8 @@ If the FC237 shell shows a Convex setup banner after sign-in, the web app render
 
 Assistant runtime notes:
 
-- FC237 can use OpenAI and Gemini from the same deployment
+- FC237 can use Gemini and OpenAI from the same deployment
+- Gemini is the recommended primary provider when both are configured
 - If one provider is unavailable or out of credits, the assistant will try the other configured provider automatically
 - If no live provider succeeds, FC237 falls back to workspace-grounded guidance instead of exposing raw API errors
 

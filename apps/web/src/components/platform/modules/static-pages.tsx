@@ -2150,8 +2150,8 @@ export function AdminPage() {
             },
             {
               label: "Assistant Runtime",
-              value: "OpenAI + Gemini",
-              detail: "Assistant output is model-backed, grounded in stored records, and can fail over between providers when availability changes.",
+              value: "Gemini first",
+              detail: "Assistant output is model-backed, grounded in stored records, uses Gemini as the primary path, and fails over to OpenAI when needed.",
               tone: "green",
             },
           ]}
