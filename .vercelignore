@@ -1,1 +1,2 @@
-apps/fumadocs
+# Keep the compatibility bridge available for older Vercel projects whose
+# Root Directory still points at apps/fumadocs.
