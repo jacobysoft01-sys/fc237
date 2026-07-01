@@ -599,6 +599,10 @@ export function buildOverview(snapshot: WorkspaceSnapshot) {
         controlKey: control.controlKey,
         status: control.implementationStatus,
         domain: controlDomain(control),
+        owner: control.owner,
+        dueDate: control.dueDate,
+        implementationGuidance: control.implementationGuidance,
+        requiredEvidenceDescription: control.requiredEvidenceDescription,
       })),
   };
 }
@@ -813,34 +817,90 @@ export function buildComplianceReport(snapshot: WorkspaceSnapshot) {
   const overview = buildOverview(snapshot);
   const topRisks = [...snapshot.risks].sort((a, b) => b.riskScore - a.riskScore).slice(0, 5);
   const topActions = overview.nextActions.slice(0, 8);
+  const weakestDomain = [...overview.domainScores].sort((a, b) => a.score - b.score)[0] ?? null;
+  const strongestDomain = [...overview.domainScores].sort((a, b) => b.score - a.score)[0] ?? null;
+  const generatedAt = new Date().toISOString();
+  const executiveHighlights = [
+    strongestDomain ? `${strongestDomain.label} is currently the strongest domain at ${strongestDomain.score}%.` : null,
+    weakestDomain ? `${weakestDomain.label} is currently the weakest domain at ${weakestDomain.score}%.` : null,
+    overview.riskRollup.highOrCritical > 0 ? `${overview.riskRollup.highOrCritical} high or critical risks still require active treatment.` : null,
+    overview.evidenceRollup.requiredSlots > 0
+      ? `Evidence coverage is ${overview.evidenceRollup.acceptedCoverage}% accepted across ${overview.evidenceRollup.requiredSlots} required slots.`
+      : null,
+    overview.incidentRollup.unresolved > 0 ? `${overview.incidentRollup.unresolved} incidents remain unresolved and should stay under active monitoring.` : null,
+  ].filter((item): item is string => Boolean(item));
+
   return {
     title: "Compliance Readiness Summary",
     summary: `${snapshot.organization.name} is ${overview.score.status.toLowerCase()} at ${overview.score.overall}% overall readiness.`,
     reportData: {
+      metadata: {
+        generatedAt,
+        generatedOn: generatedAt.slice(0, 10),
+        reportHeader:
+          snapshot.organization.branding?.reportHeader ??
+          "FC237 Compliance Readiness Summary",
+        reportFooter:
+          snapshot.organization.branding?.reportFooter ??
+          "Generated from live FC237 platform records.",
+      },
       organization: {
         name: snapshot.organization.name,
         sector: snapshot.organization.sector,
         location: snapshot.organization.location,
+        sizeCategory: snapshot.organization.sizeCategory,
+        employeeCount: snapshot.organization.employeeCount,
+        website: snapshot.organization.website,
+        companyProfile: snapshot.organization.companyProfile,
+        riskOwner: snapshot.organization.riskOwner,
+        cyberFocalPoint: snapshot.organization.cyberFocalPoint,
+        nextReviewDate: snapshot.organization.nextReviewDate,
+        contacts: snapshot.organization.contacts,
         selectedFrameworks: snapshot.organization.selectedFrameworks ?? [],
+      },
+      executiveSummary: {
+        overviewText: `${snapshot.organization.name} currently has an FC237 posture of ${overview.score.status.toLowerCase()} at ${overview.score.overall}%. This report highlights the strongest domains, the weakest operational gaps, the priority risks requiring treatment, and the next actions needed to improve control defensibility and reporting confidence.`,
+        highlights: executiveHighlights,
+        strongestDomain,
+        weakestDomain,
       },
       score: overview.score,
       domainScores: overview.domainScores,
+      riskRollup: overview.riskRollup,
+      evidenceRollup: overview.evidenceRollup,
+      vendorRollup: overview.vendorRollup,
+      policyRollup: overview.policyRollup,
+      incidentRollup: overview.incidentRollup,
+      aiRollup: overview.aiRollup,
+      readiness: overview.readiness,
       topRisks: topRisks.map((risk) => ({
         title: risk.title,
         level: risk.riskLevel,
         score: risk.riskScore,
         owner: risk.owner,
         treatment: risk.treatmentOption ?? risk.treatmentStatus,
+        dueDate: risk.dueDate,
+        requiredEvidenceSummary: risk.requiredEvidenceSummary,
+        relatedControlCount: (risk.relatedControlIds ?? []).length,
       })),
       controlsNeedingAttention: overview.controlsNeedingAttention,
-      evidenceRollup: overview.evidenceRollup,
       nextActions: topActions.map((task) => ({
         title: task.title,
+        description: task.description,
+        owner: task.owner ?? snapshot.organization.riskOwner,
         priority: task.priority,
         dueDate: task.dueDate,
         status: task.status,
+        sourceType: task.sourceType,
+        linkedSummary: task.linkedSummary,
       })),
       assistantInsight: overview.assistantInsight,
+      methodology: [
+        "Overall FC237 Score is calculated as an equal-weight average across seven live domain scores.",
+        "Evidence Coverage is derived from submitted and accepted evidence against required control evidence slots.",
+        "Risk priority is based on the stored likelihood x impact scoring model and current ownership, treatment, and control linkage.",
+        "Vendor, incident, policy, and AI signals are taken directly from linked FC237 records active at generation time.",
+      ],
       disclaimer:
         "This report is built from stored FC237 platform data. It supports governance and readiness review but does not replace formal legal, audit, or specialist cybersecurity advice.",
     },

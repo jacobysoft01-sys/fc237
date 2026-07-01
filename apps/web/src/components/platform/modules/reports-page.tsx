@@ -4,9 +4,9 @@ import { api } from "@FC237/backend/convex/_generated/api";
 import { Button } from "@FC237/ui/components/button";
 import { useMutation, useQuery } from "convex/react";
 import { FileText } from "lucide-react";
-import { jsPDF } from "jspdf";
 import { useState } from "react";
 
+import { downloadCompliancePdfReport } from "@/components/platform/modules/report-pdf";
 import { EmptyState, ModulePage, SectionCard, SummaryGrid, scoreTone, statusTone } from "@/components/platform/modules/shared";
 import { StatusBadge } from "@/components/platform/ui";
 
@@ -16,85 +16,9 @@ export function ReportsPage() {
   const generate = useMutation(api.reports.generate);
   const [status, setStatus] = useState("");
 
-  function downloadCompliancePdf() {
+  async function downloadCompliancePdf() {
     if (!preview?.complianceSummary) return;
-    const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 48;
-    const lineWidth = pageWidth - 96;
-
-    const report = preview.complianceSummary;
-    const data = report.reportData as any;
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(24);
-    doc.text(report.title, 48, y);
-    y += 28;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(report.summary, 48, y, { maxWidth: lineWidth });
-    y += 34;
-
-    const metrics = [
-      ["Overall Score", `${data.score.overall}%`],
-      ["Status", data.score.status],
-      ["Top Risks", `${data.topRisks.length}`],
-      ["Required Evidence Slots", `${data.evidenceRollup.requiredSlots}`],
-    ];
-
-    metrics.forEach(([label, value], index) => {
-      const x = 48 + (index % 2) * 250;
-      const currentY = y + Math.floor(index / 2) * 72;
-      doc.roundedRect(x, currentY, 220, 56, 8, 8, "S");
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text(label, x + 12, currentY + 18);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text(value, x + 12, currentY + 40);
-    });
-
-    y += 160;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("Domain Scores", 48, y);
-    y += 16;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    data.domainScores.forEach((domain: any) => {
-      doc.text(`${domain.label}: ${domain.score}% (${domain.status})`, 48, y);
-      y += 16;
-    });
-
-    y += 10;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("Top Risks", 48, y);
-    y += 16;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    data.topRisks.forEach((risk: any) => {
-      doc.text(`${risk.title} | ${risk.level} | ${risk.score} | ${risk.owner}`, 48, y, { maxWidth: lineWidth });
-      y += 16;
-    });
-
-    y += 10;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("Next Actions", 48, y);
-    y += 16;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    data.nextActions.forEach((action: any) => {
-      doc.text(`${action.title} | ${action.priority} | ${action.dueDate}`, 48, y, { maxWidth: lineWidth });
-      y += 16;
-    });
-
-    y += 10;
-    doc.setFont("helvetica", "italic");
-    doc.text(data.disclaimer, 48, y, { maxWidth: lineWidth });
-    doc.save("fc237-compliance-readiness-summary.pdf");
+    await downloadCompliancePdfReport(preview.complianceSummary);
     setStatus("Compliance Readiness Summary PDF downloaded.");
   }
 
@@ -146,7 +70,7 @@ export function ReportsPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={() => generate({ reportType: "compliance_readiness_summary" })}>Store Report</Button>
-                  <Button onClick={downloadCompliancePdf} variant="outline">
+                  <Button onClick={() => void downloadCompliancePdf()} variant="outline">
                     Download PDF
                   </Button>
                 </div>
