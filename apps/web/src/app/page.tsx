@@ -17,7 +17,7 @@ export default function Home() {
         <header className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <div>
-              <ProjectLogo className="max-w-[190px]" />
+              <ProjectLogo className="max-w-[280px]" />
               <div className="mt-1 text-xs text-muted-foreground">{FC237_PRODUCT_TAGLINE}</div>
             </div>
           </Link>

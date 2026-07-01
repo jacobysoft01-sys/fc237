@@ -1,12 +1,13 @@
 "use client";
 
 import { api } from "@FC237/backend/convex/_generated/api";
-import { Button } from "@FC237/ui/components/button";
+import { Button, buttonVariants } from "@FC237/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@FC237/ui/components/card";
 import { Input } from "@FC237/ui/components/input";
 import { useAction, useQuery } from "convex/react";
 import { AlertCircle, Bot } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 import { EmptyState, ModulePage, SectionCard, SummaryGrid } from "@/components/platform/modules/shared";
 import { StatusBadge } from "@/components/platform/ui";
@@ -28,10 +29,10 @@ type AssistantUiError = {
 function formatAssistantUiError(submissionError: unknown): AssistantUiError {
   const message = submissionError instanceof Error ? submissionError.message : "";
 
-  if (message.includes("Finish workspace setup")) {
+  if (message.includes("Start the initial questionnaire to create your FC237 workspace") || message.includes("Finish workspace setup")) {
     return {
-      title: "Finish workspace setup",
-      detail: "Create or select an organization first so the assistant can read your live FC237 records.",
+      title: "Create the FC237 workspace first",
+      detail: "Start the initial questionnaire before opening the assistant so FC237 has a real organization, inventory, and governance baseline to read from.",
     };
   }
 
@@ -60,14 +61,39 @@ export function AssistantPage() {
   const [content, setContent] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<AssistantUiError | null>(null);
+  const currentWorkspace = useQuery(api.organizations.getCurrent);
   const sessions = useQuery(api.assistant.listSessions) ?? [];
   const messages = useQuery(api.assistant.listMessages, { sessionId }) ?? [];
   const dashboard = useQuery(api.dashboard.getOverview);
   const sendMessage = useAction(api.assistantActions.sendMessage);
+  const needsWorkspaceSetup = currentWorkspace !== undefined && !currentWorkspace?.organization;
+  const needsQuestionnaire = Boolean(currentWorkspace?.organization && dashboard?.needsOnboarding);
+  const assistantLocked = needsWorkspaceSetup || needsQuestionnaire;
+  const setupTitle = needsWorkspaceSetup ? "Create the FC237 workspace first" : "Complete the initial questionnaire first";
+  const setupDetail = needsWorkspaceSetup
+    ? "The assistant only becomes useful after FC237 creates a real organization record, the first inventory, linked controls, and the first action plan."
+    : "The assistant has your workspace, but it still needs the questionnaire baseline before it can explain risks, evidence gaps, and next actions from live data.";
 
   async function submit(message = content) {
     const prompt = message.trim();
     if (!prompt) return;
+
+    if (needsWorkspaceSetup) {
+      setError({
+        title: "Create the FC237 workspace first",
+        detail: "Open the initial questionnaire first so the assistant can work from real FC237 records instead of an empty deployment.",
+      });
+      return;
+    }
+
+    if (needsQuestionnaire) {
+      setError({
+        title: "Complete the first assessment first",
+        detail: "Finish the initial questionnaire so FC237 can generate the baseline dashboard, action plan, risks, and evidence coverage before the assistant responds.",
+      });
+      return;
+    }
+
     setPending(true);
     setError(null);
     try {
@@ -91,27 +117,33 @@ export function AssistantPage() {
           items={[
             {
               label: "Mode",
-              value: dashboard && !dashboard.needsOnboarding ? dashboard.assistantInsight.mode : "Ask",
-              detail: dashboard && !dashboard.needsOnboarding ? dashboard.assistantInsight.summary : "Complete the initial questionnaire to activate context-aware guidance.",
-              tone: "purple",
+              value: needsWorkspaceSetup ? "Setup" : dashboard && !dashboard.needsOnboarding ? dashboard.assistantInsight.mode : "Baseline",
+              detail: needsWorkspaceSetup
+                ? "Start the questionnaire to create the live FC237 workspace first."
+                : dashboard && !dashboard.needsOnboarding
+                  ? dashboard.assistantInsight.summary
+                  : "Complete the initial questionnaire to activate context-aware guidance.",
+              tone: needsWorkspaceSetup ? "orange" : "purple",
             },
             {
               label: "Sessions",
               value: `${sessions.length}`,
-              detail: "Stored assistant sessions for the current organization.",
-              tone: "green",
+              detail: assistantLocked ? "Sessions appear after FC237 has a live workspace baseline." : "Stored assistant sessions for the current organization.",
+              tone: assistantLocked ? "orange" : "green",
             },
             {
               label: "Recommended Actions",
               value: `${dashboard && !dashboard.needsOnboarding ? dashboard.nextActions.length : 0}`,
               detail: "The assistant responds against the same action queue as the dashboard.",
-              tone: "orange",
+              tone: assistantLocked ? "neutral" : "orange",
             },
             {
               label: "Runtime",
-              value: "Gemini first",
-              detail: "Responses stay grounded in FC237 records, use Gemini as the primary model path, and fail over to OpenAI only when needed.",
-              tone: "green",
+              value: assistantLocked ? "Waiting" : "Gemini first",
+              detail: assistantLocked
+                ? "Gemini and OpenAI stay behind the guided setup until FC237 has a workspace baseline to ground on."
+                : "Responses stay grounded in FC237 records, use Gemini as the primary model path, and fail over to OpenAI only when needed.",
+              tone: assistantLocked ? "orange" : "green",
             },
           ]}
         />
@@ -143,7 +175,22 @@ export function AssistantPage() {
             <CardTitle>Conversation</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {messages.length === 0 ? (
+            {assistantLocked ? (
+              <div className="grid gap-4 rounded-2xl bg-muted/30 p-4">
+                <div className="grid gap-2">
+                  <p className="text-sm font-semibold">{setupTitle}</p>
+                  <p className="text-sm text-muted-foreground">{setupDetail}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link className={buttonVariants()} href="/onboarding">
+                    Start Readiness Assessment
+                  </Link>
+                  <Link className={buttonVariants({ variant: "outline" })} href="/dashboard">
+                    Review Dashboard Entry
+                  </Link>
+                </div>
+              </div>
+            ) : messages.length === 0 ? (
               <div className="grid gap-4 rounded-2xl bg-muted/30 p-4">
                 <p className="text-sm text-muted-foreground">
                   Use the assistant when you want the FC237 journey explained from zero, or when you want the next best action translated through current dashboard scores, inventory, risks, evidence, incidents, reports, or policy state.
@@ -223,13 +270,13 @@ export function AssistantPage() {
               }}
             >
               <Input
-                disabled={pending}
+                disabled={pending || assistantLocked}
                 placeholder="Ask about the FC237 journey, inventory, risk, evidence, incidents, reports, or policy work..."
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
               />
-              <Button disabled={pending} type="submit">
-                {pending ? "Thinking..." : "Send"}
+              <Button disabled={pending || assistantLocked} type="submit">
+                {assistantLocked ? "Start Setup" : pending ? "Thinking..." : "Send"}
               </Button>
             </form>
           </CardContent>

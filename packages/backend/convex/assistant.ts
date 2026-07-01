@@ -1,25 +1,20 @@
 import { v } from "convex/values";
 
 import { internalMutation, query } from "./_generated/server";
-import { logAuditEvent, now } from "./_shared";
+import { getActiveOrganization, logAuditEvent, now } from "./_shared";
 
 export const listSessions = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
-      .unique();
-    if (!user?.activeOrganizationId) return [];
+    const active = await getActiveOrganization(ctx);
+    if (!active?.organization) return [];
 
     return (await ctx.db
       .query("chatSessions")
-      .withIndex("by_organization", (q) => q.eq("organizationId", user.activeOrganizationId as never))
-      .collect()
-    ).sort((left, right) => right.updatedAt - left.updatedAt);
+      .withIndex("by_user", (q) => q.eq("userId", active.user._id))
+      .collect())
+      .filter((session) => session.organizationId === active.organization!._id)
+      .sort((left, right) => right.updatedAt - left.updatedAt);
   },
 });
 
@@ -27,17 +22,11 @@ export const listMessages = query({
   args: { sessionId: v.optional(v.id("chatSessions")) },
   handler: async (ctx, args) => {
     if (!args.sessionId) return [];
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
-      .unique();
-    if (!user?.activeOrganizationId) return [];
+    const active = await getActiveOrganization(ctx);
+    if (!active?.organization) return [];
 
     const session = await ctx.db.get(args.sessionId);
-    if (!session || session.organizationId !== user.activeOrganizationId) return [];
+    if (!session || session.organizationId !== active.organization._id || session.userId !== active.user._id) return [];
 
     return (await ctx.db
       .query("chatMessages")

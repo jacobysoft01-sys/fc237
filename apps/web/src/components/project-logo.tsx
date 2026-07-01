@@ -11,5 +11,5 @@ export function ProjectLogo({
   className?: string;
   src?: string | null;
 }) {
-  return <img alt={alt} className={cn("h-auto w-full", className)} src={resolveBrandLogoUrl(src)} />;
+  return <img alt={alt} className={cn("h-auto w-full object-contain object-left", className)} src={resolveBrandLogoUrl(src)} />;
 }

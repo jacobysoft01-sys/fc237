@@ -3,6 +3,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { loadWorkspaceSnapshot, syncGeneratedActions } from "./_engine";
 
 type ReadCtx = QueryCtx | MutationCtx;
+type AuthIdentity = NonNullable<Awaited<ReturnType<QueryCtx["auth"]["getUserIdentity"]>>>;
 
 export function now() {
   return Date.now();
@@ -45,14 +46,32 @@ export async function getCurrentIdentity(ctx: ReadCtx) {
   return await ctx.auth.getUserIdentity();
 }
 
+function normalizeEmail(email?: string | null) {
+  const normalized = email?.trim().toLowerCase();
+  return normalized ? normalized : null;
+}
+
+async function findUserByIdentity(ctx: ReadCtx, identity: AuthIdentity) {
+  const byClerkId = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
+    .unique();
+  if (byClerkId) return byClerkId;
+
+  const email = normalizeEmail(identity.email);
+  if (!email) return null;
+
+  return await ctx.db
+    .query("users")
+    .withIndex("by_email", (q) => q.eq("email", email))
+    .first();
+}
+
 export async function getCurrentUser(ctx: ReadCtx) {
   const identity = await getCurrentIdentity(ctx);
   if (!identity) return null;
 
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
-    .unique();
+  const user = await findUserByIdentity(ctx, identity);
 
   return user ? { identity, user } : null;
 }
@@ -71,25 +90,31 @@ export async function ensureUser(ctx: MutationCtx) {
     throw new Error("Authentication required");
   }
 
-  const existing = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_user_id", (q) => q.eq("clerkUserId", identity.subject))
-    .unique();
-
   const timestamp = now();
+  const normalizedEmail = normalizeEmail(identity.email);
+  const existing = await findUserByIdentity(ctx, identity);
+
   if (existing) {
     await ctx.db.patch(existing._id, {
-      email: identity.email,
-      fullName: identity.name,
+      clerkUserId: identity.subject,
+      email: normalizedEmail ?? undefined,
+      fullName: identity.name ?? undefined,
       updatedAt: timestamp,
     });
-    return { identity, user: existing };
+
+    const refreshed = await ctx.db.get(existing._id);
+    if (!refreshed) throw new Error("Unable to refresh the current user");
+
+    return {
+      identity,
+      user: await ensureWorkspaceMembership(ctx, refreshed),
+    };
   }
 
   const userId = await ctx.db.insert("users", {
     clerkUserId: identity.subject,
-    email: identity.email,
-    fullName: identity.name,
+    email: normalizedEmail ?? undefined,
+    fullName: identity.name ?? undefined,
     role: "member",
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -97,7 +122,79 @@ export async function ensureUser(ctx: MutationCtx) {
 
   const user = await ctx.db.get(userId);
   if (!user) throw new Error("Unable to create user");
-  return { identity, user };
+  return {
+    identity,
+    user: await ensureWorkspaceMembership(ctx, user),
+  };
+}
+
+async function ensureWorkspaceMembership(ctx: MutationCtx, user: Doc<"users">) {
+  const timestamp = now();
+  let currentUser = user;
+
+  const activeMembership =
+    currentUser.activeOrganizationId
+      ? await ctx.db
+          .query("organizationMembers")
+          .withIndex("by_organization_user", (q) =>
+            q.eq("organizationId", currentUser.activeOrganizationId as Id<"organizations">).eq("userId", currentUser._id),
+          )
+          .unique()
+      : null;
+
+  const activeMembershipIsHealthy =
+    Boolean(currentUser.activeOrganizationId) && Boolean(activeMembership && activeMembership.status === "active");
+  if (activeMembershipIsHealthy) {
+    return currentUser;
+  }
+
+  const memberships = (await ctx.db
+    .query("organizationMembers")
+    .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+    .collect())
+    .filter((membership) => membership.status === "active")
+    .sort((left, right) => right.createdAt - left.createdAt);
+  const existingMembership = memberships[0] ?? null;
+
+  if (existingMembership) {
+    await ctx.db.patch(currentUser._id, {
+      activeOrganizationId: existingMembership.organizationId,
+      role: existingMembership.role,
+      updatedAt: timestamp,
+    });
+
+    const refreshed = await ctx.db.get(currentUser._id);
+    if (!refreshed) throw new Error("Unable to refresh the current workspace membership");
+    return refreshed;
+  }
+
+  const createdOrganizations = (await ctx.db
+    .query("organizations")
+    .withIndex("by_created_by", (q) => q.eq("createdBy", currentUser._id))
+    .collect())
+    .sort((left, right) => right.updatedAt - left.updatedAt);
+  const createdOrganization = createdOrganizations[0] ?? null;
+
+  if (!createdOrganization) {
+    return currentUser;
+  }
+
+  await ctx.db.insert("organizationMembers", {
+    organizationId: createdOrganization._id,
+    userId: currentUser._id,
+    role: "owner",
+    status: "active",
+    createdAt: timestamp,
+  });
+  await ctx.db.patch(currentUser._id, {
+    activeOrganizationId: createdOrganization._id,
+    role: "owner",
+    updatedAt: timestamp,
+  });
+
+  const refreshed = await ctx.db.get(currentUser._id);
+  if (!refreshed) throw new Error("Unable to restore the current workspace");
+  return refreshed;
 }
 
 export async function getActiveOrganization(ctx: ReadCtx) {

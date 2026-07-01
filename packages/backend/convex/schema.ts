@@ -89,7 +89,9 @@ export default defineSchema({
     activeOrganizationId: v.optional(v.id("organizations")),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_clerk_user_id", ["clerkUserId"]),
+  })
+    .index("by_clerk_user_id", ["clerkUserId"])
+    .index("by_email", ["email"]),
 
   organizations: defineTable({
     name: v.string(),
@@ -114,7 +116,7 @@ export default defineSchema({
     maturityDomainScores: v.optional(maturityDomainScoresValidator),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }),
+  }).index("by_created_by", ["createdBy"]),
 
   organizationMembers: defineTable({
     organizationId: v.id("organizations"),

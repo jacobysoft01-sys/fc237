@@ -129,7 +129,7 @@ export default function PlatformShell({
             <div className="px-5 pb-5 pt-6">
               <div className="flex items-center justify-between gap-3">
                 <Link href="/dashboard" className="inline-flex items-center">
-                  <ProjectLogo className="w-[112px] max-w-none" src={current?.organization?.branding?.logoUrl} />
+                  <ProjectLogo className="w-[176px] max-w-none" src={current?.organization?.branding?.logoUrl} />
                 </Link>
                 <Button aria-label="Search navigation" size="icon-sm" variant="ghost">
                   <Search className="size-4" />
@@ -180,7 +180,7 @@ export default function PlatformShell({
             <div className="flex min-h-20 flex-wrap items-center justify-between gap-4 px-4 py-4 lg:px-8">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 lg:hidden">
-                  <ProjectLogo className="w-[108px] max-w-none" src={current?.organization?.branding?.logoUrl} />
+                  <ProjectLogo className="w-[156px] max-w-none" src={current?.organization?.branding?.logoUrl} />
                 </div>
                 <p className="hidden text-sm text-muted-foreground sm:block">
                   Guided flow: questionnaire, dashboard, inventory, risk treatment, controls, evidence, reporting, and continuous improvement.

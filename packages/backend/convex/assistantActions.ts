@@ -395,7 +395,10 @@ async function requestAssistantResponse(args: {
         provider: settings.label,
         providerModel: settings.model,
       };
-    } catch {
+    } catch (error) {
+      console.warn(
+        `[FC237 assistant] ${settings.label} failed: ${error instanceof Error ? error.message : "Unknown provider error"}`,
+      );
       failedAttempts.push({
         label: settings.label,
       });
@@ -422,9 +425,11 @@ export const sendMessage = action({
     sessionId: v.optional(v.id("chatSessions")),
   },
   handler: async (ctx, args): Promise<SendMessageResult> => {
+    await ctx.runMutation(api.users.upsertCurrent, {});
+
     const current = await ctx.runQuery(api.organizations.getCurrent, {});
-    if (!current?.organization || !current.user) {
-      throw new Error("Finish workspace setup before using the assistant.");
+    if (!current?.organization) {
+      throw new Error("Start the initial questionnaire to create your FC237 workspace before using the assistant.");
     }
 
     const overview = await ctx.runQuery(api.dashboard.getOverview, {});
