@@ -6,11 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@FC237/ui/components/c
 import { Input } from "@FC237/ui/components/input";
 import { useAction, useQuery } from "convex/react";
 import { AlertCircle, Bot } from "lucide-react";
-import { useState } from "react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { EmptyState, ModulePage, SectionCard, SummaryGrid } from "@/components/platform/modules/shared";
-import { StatusBadge } from "@/components/platform/ui";
 
 const shortcuts = [
   "Guide me through the FC237 workflow from questionnaire to report.",
@@ -25,6 +24,10 @@ type AssistantUiError = {
   detail: string;
   title: string;
 };
+
+function toTextList(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item).trim()).filter(Boolean) : [];
+}
 
 function formatAssistantUiError(submissionError: unknown): AssistantUiError {
   const message = submissionError instanceof Error ? submissionError.message : "";
@@ -206,48 +209,122 @@ export function AssistantPage() {
             ) : (
               <div className="grid gap-3 rounded-2xl bg-muted/20 p-4">
                 {messages.map((message: any) => (
-                  <div
-                    className={message.senderType === "user" ? "ml-auto max-w-[84%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground" : "max-w-[90%] rounded-2xl bg-background px-4 py-3 shadow-sm"}
-                    key={message._id}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    {message.structuredResponse ? (
-                      <div className="mt-3 grid gap-2 text-xs">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <StatusBadge tone="purple">{message.structuredResponse.mode}</StatusBadge>
-                          {message.structuredResponse.referencedScore ? <StatusBadge tone="green">{message.structuredResponse.referencedScore}</StatusBadge> : null}
-                          {message.structuredResponse.provider ? <StatusBadge tone="green">{message.structuredResponse.provider}</StatusBadge> : null}
-                          {message.structuredResponse.providerModel ? <StatusBadge tone="orange">{message.structuredResponse.providerModel}</StatusBadge> : null}
-                        </div>
-                        {message.structuredResponse.deliveryNote ? (
-                          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-900 dark:text-amber-200">
-                            {message.structuredResponse.deliveryNote}
+                  (() => {
+                    const structured = message.structuredResponse;
+                    const suggestedActions = toTextList(structured?.recommendedActions);
+                    const evidenceToKeep = toTextList(structured?.evidenceToKeep);
+                    const hasSupportDetails = Boolean(
+                      structured?.referencedScore || structured?.cameroonContext || structured?.escalationNotice || structured?.disclaimer,
+                    );
+
+                    return (
+                      <div
+                        className={
+                          message.senderType === "user"
+                            ? "ml-auto max-w-[84%] rounded-2xl bg-primary px-4 py-3 text-primary-foreground"
+                            : "max-w-[90%] rounded-[28px] bg-background px-5 py-4 shadow-sm ring-1 ring-border/60"
+                        }
+                        key={message._id}
+                      >
+                        <p className="text-sm leading-7 whitespace-pre-wrap">{message.content}</p>
+                        {structured && message.senderType !== "user" ? (
+                          <div className="mt-4 grid gap-4 text-sm">
+                            {structured.deliveryNote ? (
+                              <p className="rounded-full bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                                {structured.deliveryNote}
+                              </p>
+                            ) : null}
+
+                            {structured.identifiedRisk ? (
+                              <div className="grid gap-1.5">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                  What stands out
+                                </p>
+                                <p className="leading-7 text-foreground/90">{structured.identifiedRisk}</p>
+                              </div>
+                            ) : null}
+
+                            {suggestedActions.length > 0 ? (
+                              <div className="grid gap-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                  Suggested next steps
+                                </p>
+                                <ul className="grid gap-2 text-foreground/90">
+                                  {suggestedActions.map((action) => (
+                                    <li className="flex gap-3 leading-7" key={action}>
+                                      <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
+                                      <span>{action}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {structured.nextStep ? (
+                              <div className="grid gap-1.5">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                  Best next move
+                                </p>
+                                <p className="leading-7 text-foreground/90">{structured.nextStep}</p>
+                              </div>
+                            ) : null}
+
+                            {evidenceToKeep.length > 0 ? (
+                              <div className="grid gap-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                                  Keep handy
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {evidenceToKeep.map((item) => (
+                                    <span
+                                      className="rounded-full bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground"
+                                      key={item}
+                                    >
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {hasSupportDetails ? (
+                              <details className="rounded-2xl bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+                                <summary className="cursor-pointer list-none font-semibold uppercase tracking-[0.24em]">
+                                  Context and safeguards
+                                </summary>
+                                <div className="mt-3 grid gap-3 leading-6">
+                                  {structured.referencedScore ? (
+                                    <p>
+                                      <span className="font-semibold text-foreground">Grounded in:</span>{" "}
+                                      {structured.referencedScore}
+                                    </p>
+                                  ) : null}
+                                  {structured.cameroonContext ? (
+                                    <p>
+                                      <span className="font-semibold text-foreground">Cameroon context:</span>{" "}
+                                      {structured.cameroonContext}
+                                    </p>
+                                  ) : null}
+                                  {structured.escalationNotice ? (
+                                    <p>
+                                      <span className="font-semibold text-foreground">Escalate when:</span>{" "}
+                                      {structured.escalationNotice}
+                                    </p>
+                                  ) : null}
+                                  {structured.disclaimer ? (
+                                    <p>
+                                      <span className="font-semibold text-foreground">Boundary:</span>{" "}
+                                      {structured.disclaimer}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </details>
+                            ) : null}
                           </div>
                         ) : null}
-                        <div>
-                          <b>Risk:</b> {message.structuredResponse.identifiedRisk}
-                        </div>
-                        <div>
-                          <b>Actions:</b> {message.structuredResponse.recommendedActions.join(" | ")}
-                        </div>
-                        <div>
-                          <b>Evidence:</b> {message.structuredResponse.evidenceToKeep.join(", ")}
-                        </div>
-                        <div>
-                          <b>Next step:</b> {message.structuredResponse.nextStep}
-                        </div>
-                        <div>
-                          <b>Cameroon context:</b> {message.structuredResponse.cameroonContext}
-                        </div>
-                        <div>
-                          <b>Escalation:</b> {message.structuredResponse.escalationNotice}
-                        </div>
-                        <div>
-                          <b>Note:</b> {message.structuredResponse.disclaimer}
-                        </div>
                       </div>
-                    ) : null}
-                  </div>
+                    );
+                  })()
                 ))}
               </div>
             )}

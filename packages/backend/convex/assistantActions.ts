@@ -225,23 +225,23 @@ function buildFailoverDeliveryNote(failedAttempts: ProviderAttemptError[], activ
   if (failedAttempts.length === 0) return undefined;
 
   if (failedAttempts.length === 1) {
-    return `${failedAttempts[0].label} was unavailable for this turn, so FC237 continued with ${activeProviderLabel}.`;
+    return `${failedAttempts[0].label} was unavailable for this turn, so I continued with ${activeProviderLabel}.`;
   }
 
   const providerList = failedAttempts.map((attempt) => attempt.label).join(" and ");
-  return `${providerList} were unavailable for this turn, so FC237 continued with ${activeProviderLabel}.`;
+  return `${providerList} were unavailable for this turn, so I continued with ${activeProviderLabel}.`;
 }
 
 function buildFallbackDeliveryNote(failedAttempts: ProviderAttemptError[], configuredProviders: ProviderSettings[]) {
   if (configuredProviders.length === 0) {
-    return "No AI provider key is configured yet. Add GEMINI_API_KEY or OPENAI_API_KEY to enable live model guidance.";
+    return "Live AI is not configured yet, so I answered from your FC237 workspace records instead.";
   }
 
   if (failedAttempts.length > 0) {
-    return "The connected AI providers are temporarily unavailable or out of credits, so FC237 returned workspace-grounded guidance instead.";
+    return "Live AI was unavailable for this turn, so I answered from your FC237 workspace records instead.";
   }
 
-  return "FC237 returned workspace-grounded guidance because no live provider completed the request.";
+  return "I answered from your FC237 workspace records because no live provider completed the request.";
 }
 
 async function callOpenAI(args: {
@@ -407,8 +407,8 @@ async function requestAssistantResponse(args: {
 
   const fallback = buildFallbackResponse(args.detectedMode, args.overview, args.content, {
     deliveryNote: buildFallbackDeliveryNote(failedAttempts, configuredProviders),
-    provider: "FC237 fallback guidance",
-    providerModel: "workspace-grounded-fallback",
+    provider: "FC237 guided reply",
+    providerModel: "workspace-grounded reply",
     reportPreview: args.reportPreview,
   });
 

@@ -100,12 +100,15 @@ export function buildCameroonSystemPrompt(organizationName: string) {
   return [
     `You are the FC237 AI governance and compliance assistant for ${organizationName}.`,
     "Your job is to advise platform users using the real FC237 workspace state they are given.",
+    "Sound like a calm, capable human teammate, not a compliance robot.",
     "Default to Cameroon-first compliance and governance guidance for SMEs, public-interest organizations, and growing digital businesses.",
     "Treat Cameroon cybersecurity, electronic communications, and e-commerce obligations as the baseline operating context.",
     "Use concrete dates whenever you mention legal or regulatory developments.",
     "Important Cameroon legal framing: Cameroon has an established cyber law baseline through Law No. 2010/012 of 21 December 2010 on cybersecurity and cybercriminality. MINPOSTEL reported on 2 December 2024 that Parliament adopted a bill on the protection of personal data. Unless the user provides newer verified legal status, treat that personal-data development as evolving legislative context instead of confidently stating final enactment or enforcement details.",
     "Practical institutional framing: ANTIC is an important Cameroon cybersecurity and information-system security actor. Favor pragmatic controls such as access control, incident logging, evidence retention, vendor due diligence, and data-handling discipline that fit Cameroon-based operating realities.",
     "Be operational, concise, and decisive. Tie every answer back to the workspace data when possible.",
+    "If the user greets you, thanks you, or asks a very short opener, respond warmly first before moving into guidance.",
+    "Do not front-load every response with raw scores, labels, or legal context unless it helps answer the user's actual message.",
     `Always teach the FC237 operating flow explicitly: ${FC237_WORKFLOW_GUIDE}`,
     "If the user sounds unsure, explain what the current stage means, why it matters, and which module they should open next.",
     "Do not invent Cameroon laws, regulators, filing obligations, or deadlines. If the answer would require current legal confirmation, say so plainly and recommend local counsel or the relevant regulator.",
@@ -194,6 +197,20 @@ export function extractResponseText(responsePayload: any) {
   return contentParts.join("\n").trim();
 }
 
+function extractJsonCandidate(rawText: string) {
+  const trimmed = rawText.trim();
+  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/iu);
+  if (fencedMatch?.[1]) return fencedMatch[1].trim();
+
+  const firstBrace = trimmed.indexOf("{");
+  const lastBrace = trimmed.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return trimmed.slice(firstBrace, lastBrace + 1).trim();
+  }
+
+  return trimmed;
+}
+
 export function normalizeAssistantResponse(payload: any, fallbackMode: AssistantMode, providerModel: string): AssistantResponse {
   const response = payload && typeof payload === "object" ? payload : {};
 
@@ -220,11 +237,52 @@ export function normalizeAssistantResponse(payload: any, fallbackMode: Assistant
 }
 
 export function parseAssistantResponse(rawText: string, fallbackMode: AssistantMode, providerModel: string) {
-  try {
-    return normalizeAssistantResponse(JSON.parse(rawText), fallbackMode, providerModel);
-  } catch {
-    return null;
+  for (const candidate of [rawText, extractJsonCandidate(rawText)]) {
+    try {
+      return normalizeAssistantResponse(JSON.parse(candidate), fallbackMode, providerModel);
+    } catch {
+      continue;
+    }
   }
+
+  return null;
+}
+
+function isGreetingPrompt(promptText: string) {
+  const normalized = promptText.trim().toLowerCase();
+  const compact = normalized.replace(/[!?.,]/gu, "").trim();
+  return /^(hi|hello|hey|good morning|good afternoon|good evening|salut|bonjour)\b/u.test(compact) && compact.split(/\s+/u).length <= 6;
+}
+
+function isThanksPrompt(promptText: string) {
+  const normalized = promptText.trim().toLowerCase();
+  const compact = normalized.replace(/[!?.,]/gu, "").trim();
+  return /^(thanks|thank you|ok thanks|okay thanks|great thanks|nice thanks)\b/u.test(compact);
+}
+
+function isCapabilityPrompt(promptText: string) {
+  const normalized = promptText.trim().toLowerCase();
+  return [
+    "help",
+    "what can you do",
+    "how can you help",
+    "where do i start",
+    "where should i start",
+    "what should i do first",
+    "guide me",
+  ].some((phrase) => normalized.includes(phrase));
+}
+
+function friendlyRiskLine(topRisk: any, lowest: any) {
+  if (topRisk?.title) {
+    return `The first thing I would look at is ${topRisk.title}.`;
+  }
+
+  if (lowest?.label) {
+    return `The area that needs the most attention right now is ${lowest.label}.`;
+  }
+
+  return "The next best move is to work through the weakest area in your dashboard rather than trying to fix everything at once.";
 }
 
 export function buildFallbackResponse(
@@ -238,14 +296,84 @@ export function buildFallbackResponse(
   const firstAction = overview?.nextActions?.[0];
   const reportSummary = options.reportPreview?.complianceSummary?.summary;
   const promptText = prompt.toLowerCase();
-  const provider = options.provider ?? "FC237 fallback guidance";
-  const providerModel = options.providerModel ?? "workspace-grounded-fallback";
+  const provider = options.provider ?? "FC237 guided reply";
+  const providerModel = options.providerModel ?? "workspace-grounded reply";
   const deliveryNote = options.deliveryNote ?? options.fallbackReason;
+
+  if (isGreetingPrompt(promptText)) {
+    return {
+      mode: "Ask",
+      answer: `Hello. I can help you work through FC237 from the questionnaire all the way to reporting and follow-up actions. ${
+        firstAction
+          ? `A good place to begin is "${firstAction.title}", and I can explain it in plain language.`
+          : `${friendlyRiskLine(topRisk, lowest)} If you want, I can walk you through the dashboard, action plan, risks, or evidence next.`
+      }`,
+      identifiedRisk: topRisk?.title ?? "No single critical item is blocking progress more than the rest right now.",
+      recommendedActions: (overview?.nextActions ?? []).slice(0, 3).map((task: any) => task.title),
+      priority: topRisk?.riskLevel ?? lowest?.status ?? "Moderate",
+      evidenceToKeep: ["dashboard snapshot", "action plan updates", "key risk notes"],
+      nextStep: firstAction ? `Open the action plan and start with "${firstAction.title}".` : "Open the dashboard and pick the weakest domain first.",
+      escalationNotice:
+        "Escalate quickly if you confirm a critical risk, an active incident, or a customer-facing AI workflow that is still unapproved.",
+      referencedScore: `Overall FC237 Score: ${overview?.score?.overall ?? 0}%`,
+      cameroonContext: DEFAULT_CAMEROON_CONTEXT,
+      disclaimer: DEFAULT_DISCLAIMER,
+      provider,
+      providerModel,
+      deliveryNote,
+    };
+  }
+
+  if (isThanksPrompt(promptText)) {
+    return {
+      mode: "Ask",
+      answer: `You're welcome. ${friendlyRiskLine(topRisk, lowest)} ${
+        firstAction ? `When you're ready, the best next move is "${firstAction.title}".` : "When you're ready, I can help you choose the next best move from the dashboard."
+      }`,
+      identifiedRisk: topRisk?.title ?? "The main risk is letting open actions sit too long without an owner or due date.",
+      recommendedActions: (overview?.nextActions ?? []).slice(0, 2).map((task: any) => task.title),
+      priority: topRisk?.riskLevel ?? lowest?.status ?? "Moderate",
+      evidenceToKeep: ["current action log", "recent risk updates"],
+      nextStep: firstAction ? `Return to the action plan and progress "${firstAction.title}".` : "Go back to the dashboard and review the weakest domain.",
+      escalationNotice:
+        "Escalate if a critical issue stays open without ownership, evidence, or a realistic due date.",
+      referencedScore: `Overall FC237 Score: ${overview?.score?.overall ?? 0}%`,
+      cameroonContext: DEFAULT_CAMEROON_CONTEXT,
+      disclaimer: DEFAULT_DISCLAIMER,
+      provider,
+      providerModel,
+      deliveryNote,
+    };
+  }
+
+  if (isCapabilityPrompt(promptText)) {
+    return {
+      mode: "Ask",
+      answer: `I can help you understand where you are in FC237, what matters most right now, and what to do next. I can translate the dashboard, action plan, risks, evidence gaps, vendors, incidents, policies, and reports into simple next steps. ${
+        firstAction
+          ? `Right now, the most useful place to start is "${firstAction.title}".`
+          : `${friendlyRiskLine(topRisk, lowest)}`
+      }`,
+      identifiedRisk: topRisk?.title ?? "The main risk is moving forward without a clear next priority.",
+      recommendedActions: (overview?.nextActions ?? []).slice(0, 4).map((task: any) => task.title),
+      priority: topRisk?.riskLevel ?? lowest?.status ?? "Moderate",
+      evidenceToKeep: ["dashboard snapshot", "current action plan", "risk notes"],
+      nextStep: firstAction ? `Open the action plan and review "${firstAction.title}" first.` : "Open the dashboard and review the weakest domain first.",
+      escalationNotice:
+        "Escalate when a critical risk, unresolved incident, or customer-facing AI issue remains open without ownership.",
+      referencedScore: `Overall FC237 Score: ${overview?.score?.overall ?? 0}%`,
+      cameroonContext: DEFAULT_CAMEROON_CONTEXT,
+      disclaimer: DEFAULT_DISCLAIMER,
+      provider,
+      providerModel,
+      deliveryNote,
+    };
+  }
 
   if (mode === "Assessment") {
     return {
       mode,
-      answer: `The latest readiness posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${(lowest?.label ?? "Readiness")} is the weakest domain right now, so the next assessment cycle should focus there first.`,
+      answer: `Here is the simple read: your latest readiness posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. The weakest area right now is ${lowest?.label ?? "readiness"}, so that should be the next assessment focus.`,
       identifiedRisk:
         topRisk?.title ??
         "Readiness gaps can hide weak identity controls, missing vendor review, or incomplete incident preparation.",
@@ -267,7 +395,7 @@ export function buildFallbackResponse(
   if (mode === "Evidence") {
     return {
       mode,
-      answer: `Evidence coverage is ${overview?.evidenceRollup?.acceptedCoverage ?? 0}% accepted and ${overview?.evidenceRollup?.submittedCoverage ?? 0}% submitted across ${overview?.evidenceRollup?.requiredSlots ?? 0} required slots. Missing or expired evidence weakens assurance, especially for customer-data and Cameroon-facing audit questions.`,
+      answer: `Your evidence picture is still incomplete. Right now ${overview?.evidenceRollup?.acceptedCoverage ?? 0}% is accepted and ${overview?.evidenceRollup?.submittedCoverage ?? 0}% is submitted across ${overview?.evidenceRollup?.requiredSlots ?? 0} required slots. That means some controls may be working in practice but are not yet defensible on paper.`,
       identifiedRisk: "Missing or expired evidence weakens assurance even when teams believe controls are in place.",
       recommendedActions: [
         "Link every required control to at least one submitted artifact.",
@@ -291,7 +419,7 @@ export function buildFallbackResponse(
   if (mode === "Incident") {
     return {
       mode,
-      answer: `Incident readiness is ${overview?.domainScores?.find((item: any) => item.key === "incident_readiness")?.score ?? 0}%. ${overview?.incidentRollup?.unresolved ?? 0} incidents are still unresolved, so containment records and escalation discipline should come before cosmetic reporting.`,
+      answer: `Incident readiness is one of the main weak points right now at ${overview?.domainScores?.find((item: any) => item.key === "incident_readiness")?.score ?? 0}%. With ${overview?.incidentRollup?.unresolved ?? 0} unresolved incidents, it makes more sense to tighten containment and documentation first than to polish reporting.`,
       identifiedRisk: "Slow containment or poor documentation can extend business disruption and reduce legal or audit defensibility.",
       recommendedActions: [
         "Record scope, timeline, and evidence immediately.",
@@ -315,7 +443,7 @@ export function buildFallbackResponse(
   if (mode === "Report") {
     return {
       mode,
-      answer: `The current production-ready report is the Compliance Readiness Summary. It should only be exported after you review live scores, top risks, evidence coverage, and any Cameroon-specific legal uncertainty that still needs local confirmation.${reportSummary ? ` ${reportSummary}` : ""}`,
+      answer: `The report that is ready to use today is the Compliance Readiness Summary. Before you export it, I'd make sure the live scores, top risks, evidence coverage, and any Cameroon-specific legal uncertainty are up to date.${reportSummary ? ` ${reportSummary}` : ""}`,
       identifiedRisk: "Reports become misleading when scores are stale or not backed by current linked records.",
       recommendedActions: [
         "Regenerate actions before creating the report.",
@@ -340,7 +468,7 @@ export function buildFallbackResponse(
     const draftOrExpired = overview?.policyRollup?.draftOrExpired ?? 0;
     return {
       mode,
-      answer: `Policy maturity is ${overview?.domainScores?.find((item: any) => item.key === "policy_maturity")?.score ?? 0}%. ${draftOrExpired} policies are draft or expired, so governance defensibility is weaker than it should be.`,
+      answer: `Your policy baseline still needs attention. Policy maturity is ${overview?.domainScores?.find((item: any) => item.key === "policy_maturity")?.score ?? 0}%, and ${draftOrExpired} policies are still draft or expired.`,
       identifiedRisk: "Outdated or missing baseline policies weaken approval workflows, evidence collection, and incident discipline.",
       recommendedActions: [
         "Create any missing priority policy types first.",
@@ -369,7 +497,7 @@ export function buildFallbackResponse(
         : `${overview?.riskRollup?.highOrCritical ?? 0} high or critical risks need treatment.`;
     return {
       mode,
-      answer: `Start with the weakest domain, ${lowest?.label ?? "current readiness"}, then close the highest-risk action items with clear owners, dates, and evidence paths.`,
+      answer: `If you want the fastest practical progress, start with ${lowest?.label ?? "the weakest domain"} and close the highest-risk actions there with clear owners, dates, and evidence.`,
       identifiedRisk: riskMessage,
       recommendedActions: (overview?.nextActions ?? []).slice(0, 4).map((task: any) => task.title),
       priority: lowest?.status ?? "Moderate",
@@ -388,7 +516,9 @@ export function buildFallbackResponse(
 
   return {
     mode,
-    answer: `Overall FC237 posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${overview?.assistantInsight?.summary ?? "Review the dashboard and next actions to choose the next best governance step."}`,
+    answer: `You already have a workable FC237 baseline. Right now your overall posture is ${(overview?.score?.status ?? "unknown").toLowerCase()} at ${overview?.score?.overall ?? 0}%. ${
+      overview?.assistantInsight?.summary ?? "The next useful move is to review the dashboard and pick the action with the highest operational value."
+    } ${friendlyRiskLine(topRisk, lowest)} ${firstAction ? `If you want a concrete next step, I would start with "${firstAction.title}".` : ""}`.trim(),
     identifiedRisk: topRisk?.title ?? "The main risk is losing sight of the next highest-value action.",
     recommendedActions: overview?.assistantInsight?.recommendedActions ?? [],
     priority: overview?.score?.status ?? "Moderate",
