@@ -1,7 +1,6 @@
 "use node";
 
-import { config as loadDotenv } from "dotenv";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { v } from "convex/values";
 
@@ -39,6 +38,31 @@ type SendMessageResult = {
 
 let envLoaded = false;
 
+function loadSimpleEnvFile(path: string) {
+  const content = readFileSync(path, "utf8");
+
+  for (const rawLine of content.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex <= 0) continue;
+
+    const key = line.slice(0, separatorIndex).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/u.test(key) || process.env[key] !== undefined) continue;
+
+    let value = line.slice(separatorIndex + 1).trim();
+    if (
+      value.length >= 2 &&
+      ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value.replace(/\\n/g, "\n");
+  }
+}
+
 function ensureLocalAiEnvLoaded() {
   if (envLoaded) return;
   envLoaded = true;
@@ -57,7 +81,11 @@ function ensureLocalAiEnvLoaded() {
       const candidate = resolve(root, fileName);
       if (seen.has(candidate) || !existsSync(candidate)) continue;
       seen.add(candidate);
-      loadDotenv({ path: candidate, override: false });
+      try {
+        loadSimpleEnvFile(candidate);
+      } catch {
+        // Ignore unreadable local-only env files and fall back to process env.
+      }
     }
   }
 }
